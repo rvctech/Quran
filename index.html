@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark" data-font="uthman">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quran</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Amiri+Quran&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen">
+
+  <!-- Reading Progress Bar -->
+  <div id="readingProgress"></div>
+
+  <!-- Header -->
+  <header class="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style="background:var(--bg-header);border-color:var(--border-color)">
+    <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <button onclick="openSidebar()" class="header-btn" title="Menu">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 class="text-lg font-semibold hide-mobile" style="color:var(--text-heading)">The Quran</h1>
+        <!-- Session Timer -->
+        <span id="sessionTimer" class="text-xs hide-mobile px-2 py-0.5 rounded-lg" style="color:var(--text-muted);background:var(--bg-hover)">0:00</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Scroll to top -->
+        <button onclick="scrollToTop()" id="goTopBtn" class="hidden header-btn" title="Back to top">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+        </button>
+
+        <!-- Fullscreen -->
+        <button onclick="toggleFullscreen()" class="header-btn" title="Fullscreen (F)">
+          <svg id="fsIconExpand" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+          <svg id="fsIconShrink" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg>
+        </button>
+
+        <!-- Font Size (hidden on mobile, shown in bottom toolbar) -->
+        <div class="hide-mobile flex items-center gap-0.5">
+          <button onclick="adjustFontSize(-1)" class="header-btn" title="Decrease font size (−)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+          </button>
+          <span id="fontSizeLabel" class="text-xs w-8 text-center" style="color:var(--text-muted)">100</span>
+          <button onclick="adjustFontSize(1)" class="header-btn" title="Increase font size (+)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          </button>
+        </div>
+
+        <!-- Auto Scroll (hidden on mobile, shown in bottom toolbar) -->
+        <button onclick="toggleAutoScroll()" id="autoScrollToggle" class="hide-mobile header-btn" title="Auto scroll (Space)">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+        </button>
+
+        <!-- Ribbon Toggle -->
+        <button onclick="toggleRibbon()" id="ribbonBtn" class="header-btn" title="Set / remove reading ribbon">
+          <svg id="ribbonIconEmpty" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2v20l7-5 7 5V2z"/></svg>
+          <svg id="ribbonIconFull" class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M5 2v20l7-5 7 5V2z"/></svg>
+        </button>
+
+        <!-- Font Picker -->
+        <div class="relative">
+          <button onclick="toggleDropdown('fontDropdown')" class="header-btn" title="Font">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
+          </button>
+          <div id="fontDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
+            <div class="dropdown-label">Quran Font</div>
+            <div class="dropdown-item active" data-font-opt="uthman" onclick="setFont('uthman')">KFGQPC Uthmanic Hafs</div>
+            <div class="dropdown-item" data-font-opt="amiri" onclick="setFont('amiri')">Amiri Quran</div>
+            <div class="dropdown-item" data-font-opt="indopak" onclick="setFont('indopak')">IndoPak / Nastaleeq</div>
+            <div class="dropdown-item" data-font-opt="lpmq" onclick="setFont('lpmq')">LPMQ Isep Misbah</div>
+          </div>
+        </div>
+
+        <!-- Theme Picker -->
+        <div class="relative">
+          <button onclick="toggleDropdown('themeDropdown')" class="header-btn" title="Theme">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+          </button>
+          <div id="themeDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-48 hidden z-50 p-2">
+            <div class="dropdown-label">Color Theme</div>
+            <div class="dropdown-item active" data-theme-opt="dark" onclick="setTheme('dark')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#292524; border:1px solid #57534e"></span>Dark
+            </div>
+            <div class="dropdown-item" data-theme-opt="light" onclick="setTheme('light')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#ffffff; border:1px solid #d6d3d1"></span>Light
+            </div>
+            <div class="dropdown-item" data-theme-opt="sepia" onclick="setTheme('sepia')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#f5edd6; border:1px solid #c4b494"></span>Sepia
+            </div>
+            <div class="dropdown-item" data-theme-opt="green" onclick="setTheme('green')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#162a1c; border:1px solid #22c55e"></span>Green
+            </div>
+            <div class="dropdown-item" data-theme-opt="navy" onclick="setTheme('navy')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#111b2e; border:1px solid #3b82f6"></span>Navy
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="mainContent" class="max-w-4xl mx-auto px-4 py-8">
+    <div id="loadingState" class="flex flex-col items-center justify-center py-32 gap-4">
+      <div class="loading-spinner"></div>
+      <p style="color:var(--text-secondary); font-family:'Amiri',serif" id="loadingText">Loading Quran...</p>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+    <div id="surahContainer" class="hidden space-y-16"></div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden">
+    <div class="toast px-5 py-3 rounded-xl shadow-xl text-sm font-medium" style="background:var(--toast-bg); color:var(--toast-text)"></div>
+  </div>
+
+  <!-- Mobile Bottom Toolbar -->
+  <div id="mobileToolbar" class="visible">
+    <button onclick="adjustFontSize(-1)" title="Smaller font">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+      <span>Aa-</span>
+    </button>
+    <button onclick="adjustFontSize(1)" title="Larger font">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      <span>Aa+</span>
+    </button>
+    <button onclick="toggleRibbon()" title="Ribbon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2v20l7-5 7 5V2z"/></svg>
+      <span>Ribbon</span>
+    </button>
+    <button onclick="exportNearestVerse()" title="Export verse">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+      <span>Export</span>
+    </button>
+    <button onclick="toggleAutoScroll()" title="Auto scroll">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+      <span>Scroll</span>
+    </button>
+    <button onclick="toggleFullscreen()" title="Fullscreen">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+      <span>Full</span>
+    </button>
+    <button onclick="openSidebar()" title="Navigate">
+      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <span>Go</span>
+    </button>
+  </div>
+
+  <!-- Auto Scroll Bar -->
+  <div id="autoScrollBar">
+    <button onclick="autoScrollDir(-1)" title="Scroll up">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+    </button>
+    <input id="autoScrollSlider" type="range" min="1" max="30" value="3" oninput="setAutoScrollSpeed(this.value)">
+    <span id="autoScrollSpeed">3</span>
+    <button onclick="autoScrollDir(1)" title="Scroll down">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    </button>
+    <button onclick="toggleAutoScroll()" title="Stop auto scroll">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
+    </button>
+  </div>
+
+  <!-- Sidebar Overlay -->
+  <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 z-50 hidden" style="background:rgba(0,0,0,0.5)" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <div id="sidebarPanel" class="sidebar-panel sidebar-bg fixed top-0 left-0 bottom-0 z-50 w-80 shadow-2xl" style="transform:translateX(-100%);overflow-y:auto">
+    <div class="p-5 border-b" style="border-color:var(--border-color)">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold" style="color:var(--text-heading)">Navigate</h2>
+        <button onclick="closeSidebar()" class="header-btn">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <!-- Tab bar -->
+      <div class="flex gap-1 p-1 rounded-xl" style="background:var(--bg-hover)">
+        <button data-nav-tab="surah" onclick="switchTab('surah')" class="active-tab flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors" style="color:var(--text-secondary)">
+          Surahs
+        </button>
+        <button data-nav-tab="juz" onclick="switchTab('juz')" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors" style="color:var(--text-secondary)">
+          Juz
+        </button>
+        <button data-nav-tab="bookmarks" onclick="switchTab('bookmarks')" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors" style="color:var(--text-secondary)">
+          Bookmarks
+        </button>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="px-5 py-3">
+      <div class="relative">
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" style="color:var(--text-muted)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="searchInput" onkeyup="handleSearch(event)" class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none" style="background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-color)" placeholder="Search surahs...">
+      </div>
+    </div>
+
+    <!-- Tab content: Surah list -->
+    <div id="tabSurah" class="px-3 pb-4 space-y-1">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Tab content: Juz list -->
+    <div id="tabJuz" class="px-3 pb-4 space-y-1 hidden">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Tab content: Bookmarks -->
+    <div id="tabBookmarks" class="px-3 pb-4 hidden">
+      <div id="bookmarksPanel" class="space-y-2"></div>
+      <button onclick="clearBookmarks()" class="w-full mt-4 py-2.5 rounded-xl text-sm font-medium transition-colors" style="background:var(--bg-hover); color:var(--text-muted)">Clear all bookmarks</button>
+    </div>
+  </div>
+
+  <!-- Fullscreen Exit Button (mobile) -->
+  <button id="fsExitBtn" onclick="toggleFullscreen()" class="hidden fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary)">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+  </button>
+
+  <!-- Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // Populate sidebar lists on load
+    document.addEventListener('DOMContentLoaded', () => {
+      const surahTab = document.getElementById('tabSurah');
+      SURAHS.forEach(s => {
+        surahTab.innerHTML += `<div class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors" style="background:transparent" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" onclick="goToSurah(${s.n})">
+          <span class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold" style="background:var(--bg-nav-active); color:var(--accent)">${s.n}</span>
+          <div class="flex-1"><span class="font-medium" style="color:var(--text-primary)">${s.en}</span> <span class="text-sm" style="color:var(--text-muted)">— ${s.name}</span></div>
+          <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--bg-hover);color:var(--text-muted)">${s.type === 'Meccan' ? 'M' : 'Mdn'}</span>
+        </div>`;
+      });
+
+      const juzTab = document.getElementById('tabJuz');
+      JUZ_DATA.forEach(j => {
+        const meta = SURAHS.find(s => s.n === j.from);
+        juzTab.innerHTML += `<div class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors" style="background:transparent" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" onclick="goToJuz(${j.n})">
+          <span class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold" style="background:var(--bg-nav-active); color:var(--accent)">${j.n}</span>
+          <div class="flex-1"><span class="font-medium" style="color:var(--text-primary)">Juz ${j.n}</span> <span class="text-sm" style="color:var(--text-muted)">— ${meta.en}</span></div>
+        </div>`;
+      });
+    });
+  </script>
+</body>
+</html>
