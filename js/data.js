@@ -166,3 +166,15 @@ const DEFAULT_TRANSLATION = 'eng-ummmuhammad';
 function editionUrl(id) {
   return EDITION_BASE + id + '.json';
 }
+
+// Audio reciters (EveryAyah CDN, per-verse SSSVVV.mp3 naming in each folder)
+const RECITERS = [
+  { id: 'alafasy', label: 'Mishary Alafasy', short: 'Alafasy', folder: 'Alafasy_128kbps' },
+  { id: 'basit-murattal', label: 'Abdul Basit — Murattal', short: 'Basit', folder: 'Abdul_Basit_Murattal_192kbps' },
+  { id: 'basit-mujawwad', label: 'Abdul Basit — Mujawwad', short: 'Basit M', folder: 'Abdul_Basit_Mujawwad_128kbps' },
+  { id: 'sudais', label: 'As-Sudais', short: 'Sudais', folder: 'Abdurrahmaan_As-Sudais_192kbps' },
+  { id: 'muaiqly', label: 'Maher Al-Muaiqly', short: 'Muaiqly', folder: 'MaherAlMuaiqly128kbps' },
+  { id: 'shuraym', label: 'Saood ash-Shuraym', short: 'Shuraym', folder: 'Saood_ash-Shuraym_128kbps' },
+];
+const DEFAULT_RECITER = 'alafasy';
+const EVERYAYAH_BASE = 'https://everyayah.com/data/';

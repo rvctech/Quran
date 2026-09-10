@@ -91,7 +91,7 @@
 
         <!-- Reading Picker (translation / transliteration) -->
         <div class="relative">
-          <button onclick="toggleDropdown('readingDropdown')" class="header-btn" title="Translation & transliteration" aria-label="Translation and transliteration settings">
+          <button onclick="toggleDropdown('readingDropdown')" class="header-btn" title="Translation, reciter & transliteration" aria-label="Translation, reciter and transliteration settings">
             <span class="material-symbols-outlined" aria-hidden="true">translate</span>
           </button>
           <div id="readingDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
@@ -102,6 +102,13 @@
             <div class="dropdown-item" data-translation-opt="eng-muftitaqiusmani" onclick="setTranslationEdition('eng-muftitaqiusmani')">Mufti Taqi Usmani</div>
             <div class="dropdown-label">Transliteration</div>
             <div class="dropdown-item" id="translitToggle" onclick="toggleTransliteration()">Latin transliteration</div>
+            <div class="dropdown-label">Reciter</div>
+            <div class="dropdown-item" data-reciter-opt="alafasy" onclick="setReciter('alafasy')">Mishary Alafasy</div>
+            <div class="dropdown-item" data-reciter-opt="basit-murattal" onclick="setReciter('basit-murattal')">Abdul Basit — Murattal</div>
+            <div class="dropdown-item" data-reciter-opt="basit-mujawwad" onclick="setReciter('basit-mujawwad')">Abdul Basit — Mujawwad</div>
+            <div class="dropdown-item" data-reciter-opt="sudais" onclick="setReciter('sudais')">As-Sudais</div>
+            <div class="dropdown-item" data-reciter-opt="muaiqly" onclick="setReciter('muaiqly')">Maher Al-Muaiqly</div>
+            <div class="dropdown-item" data-reciter-opt="shuraym" onclick="setReciter('shuraym')">Saood ash-Shuraym</div>
             <div class="dropdown-label">Status</div>
             <div class="px-3 py-1 text-xs" id="readingStatus" style="color:var(--text-muted)">Arabic only</div>
           </div>
@@ -212,7 +219,15 @@
       <span class="material-symbols-outlined" aria-hidden="true">skip_next</span>
     </button>
     <div id="audioLabel" class="audio-label" title="Currently playing">—</div>
-    <span class="audio-reciter">Alafasy</span>
+    <button id="reciterBtn" onclick="toggleReciterMenu(event)" title="Change reciter" aria-label="Change reciter" aria-haspopup="menu">
+      <span class="audio-reciter" id="reciterBadge">Alafasy</span>
+      <span class="material-symbols-outlined reciter-caret" aria-hidden="true">arrow_drop_down</span>
+    </button>
+    <div id="reciterMenu" class="dropdown-panel reciter-menu hidden" role="menu" aria-label="Choose reciter"></div>
+    <span id="audioDlProg" class="audio-dl-prog hidden"></span>
+    <button onclick="downloadCurrentSurahAudio()" id="audioDlBtn" title="Download this surah for offline" aria-label="Download current surah audio for offline">
+      <span class="material-symbols-outlined" id="audioDlIcon" aria-hidden="true">download</span>
+    </button>
   </div>
 
   <!-- Sidebar Overlay -->

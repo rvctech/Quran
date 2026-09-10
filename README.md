@@ -11,7 +11,7 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 - **Material Symbols Icons** — consistent icon set across header, toolbars, and sidebar
 - **Translation** — English (Saheeh International, Clear Quran, Taqi Usmani), verse-by-verse, offline-cached
 - **Transliteration** — Latin transliteration for pronunciation help
-- **Bookmarks** — star button in the header, `B` key, or tap any ayah number
+- **Bookmarks** — header bookmark button, `B` key, or tap any ayah number; full reading list with verse text in the sidebar
 - **Reading Ribbon** — mark a specific verse to resume from
 - **Auto Scroll** — hands-free reading with adjustable speed
 - **Font Size Control** — scalable from 60% to 200%
@@ -19,7 +19,7 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 - **Swipe Navigation** — swipe left/right on mobile to jump between surahs
 - **Reading Progress Bar** — tracks scroll position
 - **Export Verses** — copy or share a verse with its reference
-- **Audio Recitation** — Mishary Alafasy per-verse audio with continuous playback and verse highlighting (`P`)
+- **Audio Recitation** — 6 reciters (Alafasy, Abdul Basit Murattal/Mujawwad, Sudais, Muaiqly, Shuraym), switchable from the player bar, with continuous playback and verse highlighting (`P`); download any surah for fully offline listening with highlighting
 - **Verse Search** — sidebar search across all Arabic text (diacritic-insensitive) plus loaded translation/transliteration
 - **Khatma Tracker** — mark each of the 30 Juz complete, progress bar, daily reading streak
 - **Last Read Persistence** — resumes where you left off

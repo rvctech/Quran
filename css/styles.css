@@ -200,6 +200,7 @@ body {
 .dropdown-panel {
   background: var(--bg-secondary); border: 1px solid var(--border-color);
   border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  max-height: 70vh; overflow-y: auto;
 }
 .dropdown-item {
   padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
@@ -477,6 +478,34 @@ input { font: inherit; }
 .audio-reciter {
   font-size: 11px; color: var(--text-muted); white-space: nowrap;
   padding: 2px 8px; border-radius: 9999px; background: var(--bg-hover);
+}
+.audio-dl-prog {
+  font-size: 11px; font-weight: 700; color: var(--accent); white-space: nowrap;
+}
+#reciterBtn {
+  display: flex !important;
+  align-items: center;
+  gap: 0;
+  min-width: 0 !important;
+  background: var(--bg-hover) !important;
+  border-radius: 9999px !important;
+  padding: 2px 2px 2px 8px !important;
+}
+#reciterBtn .audio-reciter { background: none; padding: 0; }
+#reciterBtn .reciter-caret { font-size: 16px; color: var(--text-muted); }
+.reciter-menu {
+  position: fixed;
+  bottom: 64px;
+  right: 12px;
+  z-index: 60;
+  min-width: 230px;
+  padding: 8px;
+}
+@media (max-width: 640px) {
+  #audioBar { padding: 6px 10px; gap: 4px; }
+  #audioBar button { min-width: 36px; min-height: 36px; padding: 6px; }
+  #reciterBtn { min-width: 0 !important; padding: 2px 2px 2px 8px !important; }
+  #audioPlayBtn .material-symbols-outlined { font-size: 24px; }
 }
 .verse-playing {
   background: var(--bg-nav-active) !important;

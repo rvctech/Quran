@@ -129,7 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
   translationEdition = localStorage.getItem('quran-translation-edition') || DEFAULT_TRANSLATION;
   showTranslation = localStorage.getItem('quran-show-translation') === '1';
   showTransliteration = localStorage.getItem('quran-show-translit') === '1';
+  const savedReciter = localStorage.getItem('quran-reciter');
+  audioReciter = RECITERS.some(r => r.id === savedReciter) ? savedReciter : DEFAULT_RECITER;
   initReadingUI();
+  updateReciterBadge();
   loadRibbon();
   loadBookmarks();
   loadQuran();
@@ -165,6 +168,9 @@ function initReadingUI() {
   if (offEl) offEl.classList.toggle('active', !showTranslation);
   const trToggle = document.getElementById('translitToggle');
   if (trToggle) trToggle.classList.toggle('active', showTransliteration);
+  document.querySelectorAll('[data-reciter-opt]').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-reciter-opt') === audioReciter);
+  });
   updateReadingLoadingUI();
 }
 
@@ -180,9 +186,10 @@ function updateReadingLoadingUI() {
       const ed = TRANSLATION_EDITIONS.find(e => e.id === translationEdition);
       parts.push('EN: ' + (ed ? ed.short : translationEdition));
     }
+    parts.push('Reciter: ' + reciterShort());
     label.textContent = parts.join(' • ');
   } else {
-    label.textContent = 'Arabic only';
+    label.textContent = 'Arabic only • Reciter: ' + reciterShort();
   }
 }
 
@@ -730,14 +737,96 @@ function autoScrollDir(dir) {
   setAutoScrollSpeed(newVal);
 }
 
-/* ========== AUDIO RECITATION (Mishary Alafasy via EveryAyah CDN) ========== */
+/* ========== AUDIO RECITATION (EveryAyah CDN, switchable reciter) ========== */
 let audioEl = null;
 let audioS = null, audioV = null;
 let audioPlaying = false;
+let audioReciter = DEFAULT_RECITER;
 
-function audioUrl(s, v) {
+function reciterFolder(id = audioReciter) {
+  const rec = RECITERS.find(r => r.id === id);
+  return rec ? rec.folder : RECITERS[0].folder;
+}
+
+function reciterShort(id = audioReciter) {
+  const rec = RECITERS.find(r => r.id === id);
+  return rec ? rec.short : RECITERS[0].short;
+}
+
+function audioUrl(s, v, folder = reciterFolder()) {
   const p = n => String(n).padStart(3, '0');
-  return `https://everyayah.com/data/Alafasy_128kbps/${p(s)}${p(v)}.mp3`;
+  return `${EVERYAYAH_BASE}${folder}/${p(s)}${p(v)}.mp3`;
+}
+
+function setReciter(id) {
+  const rec = RECITERS.find(r => r.id === id);
+  if (!rec || id === audioReciter) { initReadingUI(); return; }
+  audioReciter = id;
+  localStorage.setItem('quran-reciter', id);
+  initReadingUI();
+  updateReciterBadge();
+  closeReciterMenu();
+  showToast('Reciter: ' + rec.label);
+  // Swap the source under the current track without scrolling away
+  if (audioS != null && audioEl) {
+    const wasPlaying = !audioEl.paused && !audioEl.ended;
+    audioEl.src = audioUrl(audioS, audioV);
+    if (wasPlaying) audioEl.play().catch(() => showToast('Audio blocked — tap play again'));
+  }
+  refreshAudioDlUI(); // download state is per-reciter
+}
+
+function updateReciterBadge() {
+  document.querySelectorAll('.audio-reciter').forEach(el => {
+    el.textContent = reciterShort();
+  });
+}
+
+function renderReciterMenu() {
+  const menu = document.getElementById('reciterMenu');
+  if (!menu) return;
+  menu.innerHTML = '';
+  const label = document.createElement('div');
+  label.className = 'dropdown-label';
+  label.textContent = 'Reciter';
+  menu.appendChild(label);
+  RECITERS.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'dropdown-item' + (r.id === audioReciter ? ' active' : '');
+    item.setAttribute('role', 'menuitemradio');
+    item.setAttribute('aria-checked', r.id === audioReciter ? 'true' : 'false');
+    item.setAttribute('tabindex', '0');
+    item.textContent = r.label;
+    const pick = () => { setReciter(r.id); closeReciterMenu(); };
+    item.addEventListener('click', pick);
+    item.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+    menu.appendChild(item);
+  });
+}
+
+function toggleReciterMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('reciterMenu');
+  if (!menu) return;
+  const willOpen = menu.classList.contains('hidden');
+  document.querySelectorAll('.dropdown-panel').forEach(d => { if (d !== menu) d.classList.add('hidden'); });
+  const ayaMenu = document.getElementById('ayaMenu');
+  if (ayaMenu) ayaMenu.remove();
+  if (willOpen) {
+    renderReciterMenu();
+    menu.classList.remove('hidden');
+    setTimeout(() => document.addEventListener('click', closeReciterMenu), 10);
+  } else {
+    menu.classList.add('hidden');
+  }
+}
+
+function closeReciterMenu(e) {
+  const menu = document.getElementById('reciterMenu');
+  if (menu && (!e || !menu.contains(e.target))) {
+    menu.classList.add('hidden');
+    document.removeEventListener('click', closeReciterMenu);
+  }
 }
 
 function ensureAudioEl() {
@@ -795,6 +884,7 @@ function playVerseAudio(s, v) {
   el.play().catch(() => showToast('Audio blocked — tap play again'));
   showAudioBar();
   markPlayingVerse();
+  refreshAudioDlUI();
   requestAnimationFrame(() => {
     document.querySelector(`[data-s="${s}"][data-v="${v}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
@@ -827,6 +917,88 @@ function stepAudio(dir) {
 
 function onAudioEnded() {
   stepAudio(1);
+}
+
+/* ========== OFFLINE SURAH AUDIO DOWNLOAD ========== */
+let audioDl = { surah: null, total: 0, done: 0, running: false, abort: null };
+
+async function appAudioCache() {
+  const keys = await caches.keys();
+  const hit = keys.find(k => k.startsWith('quran-')) || 'quran-v4';
+  return caches.open(hit);
+}
+
+async function isSurahAudioCached(s) {
+  try {
+    if (!('caches' in window)) return false;
+    const cache = await appAudioCache();
+    const meta = getSurahMeta(s);
+    for (let v = 1; v <= meta.verses; v++) {
+      if (!(await cache.match(audioUrl(s, v)))) return false;
+    }
+    return true;
+  } catch { return false; }
+}
+
+function refreshAudioDlUI() {
+  const btn = document.getElementById('audioDlBtn');
+  const icon = document.getElementById('audioDlIcon');
+  const prog = document.getElementById('audioDlProg');
+  if (!btn || !icon || !prog) return;
+  if (audioDl.running && audioDl.surah === audioS) {
+    icon.textContent = 'close';
+    btn.title = 'Cancel download';
+    btn.setAttribute('aria-label', 'Cancel audio download');
+    prog.classList.remove('hidden');
+    prog.textContent = `${audioDl.done}/${audioDl.total}`;
+    return;
+  }
+  prog.classList.add('hidden');
+  const s = audioS;
+  if (s == null) return;
+  icon.textContent = 'download';
+  btn.title = 'Download this surah for offline';
+  btn.setAttribute('aria-label', 'Download current surah audio for offline');
+  isSurahAudioCached(s).then(cached => {
+    if (audioS !== s || audioDl.running) return; // stale check
+    icon.textContent = cached ? 'download_done' : 'download';
+    btn.title = cached ? 'Surah audio already downloaded' : 'Download this surah for offline';
+  });
+}
+
+async function downloadCurrentSurahAudio() {
+  if (audioS == null) return;
+  if (audioDl.running) { audioDl.abort?.abort(); return; } // tap × to cancel
+  if (!('caches' in window)) { showToast('Downloads need http(s) — serve the app locally'); return; }
+  if (!navigator.onLine) { showToast('You are offline — connect to download'); return; }
+  const s = audioS;
+  const meta = getSurahMeta(s);
+  const folder = reciterFolder(); // pin reciter so a mid-download switch can't mix voices
+  const recName = reciterShort();
+  if (await isSurahAudioCached(s)) { showToast(`${recName} audio already downloaded`); refreshAudioDlUI(); return; }
+  audioDl = { surah: s, total: meta.verses, done: 0, running: true, abort: new AbortController() };
+  refreshAudioDlUI();
+  showToast(`Downloading ${meta.en} (${recName}) — tap × to cancel`);
+  try {
+    const cache = await appAudioCache();
+    for (let v = 1; v <= meta.verses; v++) {
+      if (audioDl.abort.signal.aborted) throw new DOMException('aborted', 'AbortError');
+      if (!(await cache.match(audioUrl(s, v, folder)))) {
+        const res = await fetch(audioUrl(s, v, folder), { signal: audioDl.abort.signal });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        await cache.put(audioUrl(s, v, folder), res);
+      }
+      audioDl.done = v;
+      if (v % 5 === 0 || v === meta.verses) refreshAudioDlUI();
+    }
+    showToast(`${meta.en} (${recName}) ready for offline`);
+  } catch (e) {
+    if (e?.name === 'AbortError') showToast('Download cancelled');
+    else { console.error(e); showToast('Download stopped — check connection'); }
+  } finally {
+    audioDl = { surah: null, total: 0, done: 0, running: false, abort: null };
+    refreshAudioDlUI();
+  }
 }
 
 function stopAudio() {
@@ -882,6 +1054,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     const menu = document.getElementById('ayaMenu');
     if (menu) { menu.remove(); return; }
+    const reciterMenu = document.getElementById('reciterMenu');
+    if (reciterMenu && !reciterMenu.classList.contains('hidden')) { closeReciterMenu(); return; }
     if (sidebarOpen) { closeSidebar(); return; }
   }
 
