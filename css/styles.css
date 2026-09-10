@@ -98,6 +98,8 @@ body {
   color: var(--text-primary);
   transition: background 0.3s, color 0.3s;
 }
+/* Offset for fixed header (h-14 = 56px) so first surah is never hidden */
+main { padding-top: 4.5rem; }
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -221,13 +223,24 @@ body {
 
 /* Header actions stay reachable on narrow screens */
 @media (max-width: 640px) {
+  header .max-w-4xl { justify-content: flex-end; }
   .header-actions {
-    overflow-x: auto;
-    scrollbar-width: none;
-    max-width: 72vw;
+    overflow: visible;
+    max-width: none;
+    flex: 1;
+    justify-content: flex-end;
   }
-  .header-actions::-webkit-scrollbar { display: none; }
   .header-actions .header-btn { flex-shrink: 0; }
+  /* Dropdowns must escape the header: show as a sheet below the header */
+  header .dropdown-panel {
+    position: fixed !important;
+    top: 58px;
+    left: 12px;
+    right: 12px;
+    width: auto !important;
+    max-height: 60vh;
+    z-index: 60;
+  }
 }
 
 /* ===== MOBILE ===== */
@@ -251,7 +264,7 @@ html:fullscreen header:hover { opacity: 1; pointer-events: auto; }
 html:fullscreen #mobileToolbar { display: none !important; }
 html:fullscreen #autoScrollBar { display: none !important; }
 html:fullscreen #readingProgress { top: 0; }
-html:fullscreen main { padding-top: 2rem; }
+html:fullscreen main { padding-top: 2rem !important; }
 
 /* ===== BOTTOM TOOLBAR (mobile) ===== */
 #mobileToolbar {
@@ -270,6 +283,16 @@ html:fullscreen main { padding-top: 2rem; }
 }
 #mobileToolbar button:active { background: var(--bg-hover); }
 #mobileToolbar button .material-symbols-outlined { font-size: 22px; }
+/* 7 buttons must fit 320px screens: allow sideways scroll, never wrap/cut */
+#mobileToolbar { overflow-x: auto; scrollbar-width: none; }
+#mobileToolbar::-webkit-scrollbar { display: none; }
+#mobileToolbar button { flex-shrink: 0; }
+@media (max-width: 380px) {
+  #mobileToolbar { padding: 6px 6px; }
+  #mobileToolbar button { min-width: 42px; font-size: 9px; padding: 6px 4px; }
+  .audio-label { display: none; }
+  #audioBar { gap: 2px; }
+}
 
 /* ===== A11Y ADDITIONS ===== */
 .header-btn:focus-visible,
