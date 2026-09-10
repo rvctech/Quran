@@ -115,15 +115,54 @@ const SURAHS = [
   {n:114,name:"الناس",en:"An-Nas",type:"Meccan",verses:6},
 ];
 
+// Exact Juz start positions (surah:ayah). `from`/`to` kept for back-compat.
 const JUZ_DATA = [
-  {n:1,from:1,to:2},{n:2,from:2,to:2},{n:3,from:2,to:3},{n:4,from:3,to:4},
-  {n:5,from:4,to:4},{n:6,from:4,to:5},{n:7,from:5,to:6},{n:8,from:6,to:7},
-  {n:9,from:7,to:8},{n:10,from:8,to:9},{n:11,from:9,to:11},{n:12,from:11,to:12},
-  {n:13,from:12,to:13},{n:14,from:14,to:15},{n:15,from:16,to:17},{n:16,from:18,to:18},
-  {n:17,from:18,to:20},{n:18,from:21,to:22},{n:19,from:23,to:25},{n:20,from:25,to:27},
-  {n:21,from:27,to:29},{n:22,from:29,to:33},{n:23,from:33,to:36},{n:24,from:36,to:39},
-  {n:25,from:39,to:41},{n:26,from:41,to:45},{n:27,from:45,to:51},{n:28,from:51,to:57},
-  {n:29,from:57,to:67},{n:30,from:67,to:114},
+  {n:1,from:1,to:2,fromSurah:1,fromAyah:1},
+  {n:2,from:2,to:2,fromSurah:2,fromAyah:142},
+  {n:3,from:2,to:3,fromSurah:2,fromAyah:253},
+  {n:4,from:3,to:4,fromSurah:3,fromAyah:93},
+  {n:5,from:4,to:4,fromSurah:4,fromAyah:24},
+  {n:6,from:4,to:5,fromSurah:4,fromAyah:148},
+  {n:7,from:5,to:6,fromSurah:5,fromAyah:82},
+  {n:8,from:6,to:7,fromSurah:6,fromAyah:111},
+  {n:9,from:7,to:8,fromSurah:7,fromAyah:88},
+  {n:10,from:8,to:9,fromSurah:8,fromAyah:41},
+  {n:11,from:9,to:11,fromSurah:9,fromAyah:93},
+  {n:12,from:11,to:12,fromSurah:11,fromAyah:6},
+  {n:13,from:12,to:13,fromSurah:12,fromAyah:53},
+  {n:14,from:14,to:15,fromSurah:15,fromAyah:1},
+  {n:15,from:16,to:17,fromSurah:17,fromAyah:1},
+  {n:16,from:18,to:18,fromSurah:18,fromAyah:75},
+  {n:17,from:18,to:20,fromSurah:21,fromAyah:1},
+  {n:18,from:21,to:22,fromSurah:23,fromAyah:1},
+  {n:19,from:23,to:25,fromSurah:25,fromAyah:21},
+  {n:20,from:25,to:27,fromSurah:27,fromAyah:56},
+  {n:21,from:27,to:29,fromSurah:29,fromAyah:46},
+  {n:22,from:29,to:33,fromSurah:33,fromAyah:31},
+  {n:23,from:33,to:36,fromSurah:36,fromAyah:28},
+  {n:24,from:36,to:39,fromSurah:39,fromAyah:32},
+  {n:25,from:39,to:41,fromSurah:41,fromAyah:47},
+  {n:26,from:41,to:45,fromSurah:46,fromAyah:1},
+  {n:27,from:45,to:51,fromSurah:51,fromAyah:31},
+  {n:28,from:51,to:57,fromSurah:58,fromAyah:1},
+  {n:29,from:57,to:67,fromSurah:67,fromAyah:1},
+  {n:30,from:67,to:114,fromSurah:78,fromAyah:1},
 ];
 
 const API_URL = 'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/ara-quranuthmanihaf.json';
+
+const EDITION_BASE = 'https://cdn.jsdelivr.net/gh/fawazahmed0/quran-api@1/editions/';
+const TRANSLITERATION_ID = 'ara-quran-la';
+const TRANSLITERATION_URL = EDITION_BASE + TRANSLITERATION_ID + '.json';
+
+// English translations (same {quran:[{chapter,verse,text}]} shape as Arabic)
+const TRANSLATION_EDITIONS = [
+  { id: 'eng-ummmuhammad', label: 'Saheeh International', short: 'Saheeh' },
+  { id: 'eng-mustafakhattaba', label: 'The Clear Quran — Mustafa Khattab', short: 'Clear Quran' },
+  { id: 'eng-muftitaqiusmani', label: 'Mufti Taqi Usmani', short: 'Usmani' },
+];
+const DEFAULT_TRANSLATION = 'eng-ummmuhammad';
+
+function editionUrl(id) {
+  return EDITION_BASE + id + '.json';
+}

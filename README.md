@@ -5,17 +5,23 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 ## Features
 
 - **Multiple Fonts** — KFGQPC Uthmanic Hafs, Amiri Quran, IndoPak/Nastaleeq, LPMQ Isep Misbah
-- **5 Color Themes** — Dark, Light, Sepia, Green, Navy
-- **Surah & Juz Navigation** — sidebar with search
-- **Bookmarks** — click any ayah number to bookmark it
-- **Reading Ribbon** — mark your current place
+- **3 Color Themes** — Dark, Light, Sepia
+- **Surah & Juz Navigation** — sidebar with surah search, exact Juz start positions, and swipe support
+- **Offline Support (PWA)** — installable, works offline after first load via service worker
+- **Material Symbols Icons** — consistent icon set across header, toolbars, and sidebar
+- **Translation** — English (Saheeh International, Clear Quran, Taqi Usmani), verse-by-verse, offline-cached
+- **Transliteration** — Latin transliteration for pronunciation help
+- **Bookmarks** — star button in the header, `B` key, or tap any ayah number
+- **Reading Ribbon** — mark a specific verse to resume from
 - **Auto Scroll** — hands-free reading with adjustable speed
 - **Font Size Control** — scalable from 60% to 200%
-- **Keyboard Shortcuts** — Space, +/−, B, R, F, Arrow keys
+- **Keyboard Shortcuts** — Space, +/−, B, R, F, P, Esc, Arrow keys
 - **Swipe Navigation** — swipe left/right on mobile to jump between surahs
 - **Reading Progress Bar** — tracks scroll position
-- **Session Timer** — shows how long you've been reading
 - **Export Verses** — copy or share a verse with its reference
+- **Audio Recitation** — Mishary Alafasy per-verse audio with continuous playback and verse highlighting (`P`)
+- **Verse Search** — sidebar search across all Arabic text (diacritic-insensitive) plus loaded translation/transliteration
+- **Khatma Tracker** — mark each of the 30 Juz complete, progress bar, daily reading streak
 - **Last Read Persistence** — resumes where you left off
 - **Fullscreen Mode**
 - **Responsive Design** — optimized for desktop and mobile
@@ -30,10 +36,12 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 | `B` | Bookmark nearest verse |
 | `R` | Toggle reading ribbon |
 | `F` | Toggle fullscreen |
+| `P` | Play / pause audio recitation |
+| `Esc` | Close menus and sidebar |
 
 ## Getting Started
 
-No build step required. Open `index.html` in a browser, or serve it locally:
+No build step required. Serve it locally (recommended — enables the service worker for offline support):
 
 ```bash
 # Python
@@ -47,13 +55,16 @@ npx serve .
 
 ```
 ├── index.html        # Main HTML
+├── manifest.json     # PWA manifest
+├── sw.js             # Service worker (offline caching)
+├── icons/            # PWA icons (PNG + SVG)
 ├── css/
 │   └── styles.css    # Themes, fonts, and component styles
 └── js/
-    ├── data.js       # Surah metadata and Juz data
+    ├── data.js       # Surah metadata, Juz data, edition catalog
     └── app.js        # Application logic
 ```
 
 ## Credits
 
-Quran text is fetched from a public Quran API at runtime. Arabic fonts sourced from their respective authors.
+Quran text, translations, and transliteration are fetched from a public Quran API at runtime. Audio recitation (Mishary Rashid Alafasy) streamed from EveryAyah. Arabic fonts sourced from their respective authors.

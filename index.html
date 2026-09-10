@@ -3,16 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quran</title>
-  <link rel="manifest" href="manifest.json">
+  <meta name="description" content="Lightweight offline-capable Quran reader with multiple themes, fonts, bookmarks and Juz navigation.">
+  <title>Quran Reader</title>
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#d97706">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="icons/icon-192.svg">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Amiri+Quran&family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen">
@@ -24,51 +26,59 @@
   <header class="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style="background:var(--bg-header);border-color:var(--border-color)">
     <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <button onclick="openSidebar()" class="header-btn" title="Menu">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        <button onclick="openSidebar()" class="hide-mobile header-btn" title="Menu" aria-label="Open navigation menu" aria-haspopup="dialog">
+          <span class="material-symbols-outlined" aria-hidden="true">menu</span>
         </button>
         <h1 class="text-lg font-semibold hide-mobile" style="color:var(--text-heading)">The Quran</h1>
-        <!-- Session Timer -->
-        <span id="sessionTimer" class="text-xs hide-mobile px-2 py-0.5 rounded-lg" style="color:var(--text-muted);background:var(--bg-hover)">0:00</span>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-2 header-actions">
         <!-- Scroll to top -->
-        <button onclick="scrollToTop()" id="goTopBtn" class="hidden header-btn" title="Back to top">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+        <button onclick="scrollToTop()" id="goTopBtn" class="hidden header-btn" title="Back to top" aria-label="Back to top">
+          <span class="material-symbols-outlined" aria-hidden="true">keyboard_arrow_up</span>
         </button>
 
         <!-- Fullscreen -->
-        <button onclick="toggleFullscreen()" class="header-btn" title="Fullscreen (F)">
-          <svg id="fsIconExpand" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
-          <svg id="fsIconShrink" class="w-5 h-5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3v3a2 2 0 01-2 2H3m18 0h-3a2 2 0 01-2-2V3m0 18v-3a2 2 0 012-2h3M3 16h3a2 2 0 012 2v3"/></svg>
+        <button onclick="toggleFullscreen()" class="hide-mobile header-btn" title="Fullscreen (F)" aria-label="Toggle fullscreen">
+          <span id="fsIconExpand" class="material-symbols-outlined" aria-hidden="true">fullscreen</span>
+          <span id="fsIconShrink" class="material-symbols-outlined hidden" aria-hidden="true">fullscreen_exit</span>
         </button>
 
         <!-- Font Size (hidden on mobile, shown in bottom toolbar) -->
         <div class="hide-mobile flex items-center gap-0.5">
-          <button onclick="adjustFontSize(-1)" class="header-btn" title="Decrease font size (−)">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+          <button onclick="adjustFontSize(-1)" class="header-btn" title="Decrease font size (−)" aria-label="Decrease font size">
+            <span class="material-symbols-outlined" aria-hidden="true">remove</span>
           </button>
           <span id="fontSizeLabel" class="text-xs w-8 text-center" style="color:var(--text-muted)">100</span>
-          <button onclick="adjustFontSize(1)" class="header-btn" title="Increase font size (+)">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <button onclick="adjustFontSize(1)" class="header-btn" title="Increase font size (+)" aria-label="Increase font size">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
           </button>
         </div>
 
         <!-- Auto Scroll (hidden on mobile, shown in bottom toolbar) -->
-        <button onclick="toggleAutoScroll()" id="autoScrollToggle" class="hide-mobile header-btn" title="Auto scroll (Space)">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+        <button onclick="toggleAutoScroll()" id="autoScrollToggle" class="hide-mobile header-btn" title="Auto scroll (Space)" aria-label="Toggle auto scroll" aria-pressed="false">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_downward</span>
+        </button>
+
+        <!-- Audio Recitation -->
+        <button onclick="toggleAudioPlay()" id="audioToggle" class="header-btn" title="Audio recitation (P)" aria-label="Play or pause audio recitation" aria-pressed="false">
+          <span class="material-symbols-outlined" aria-hidden="true">headphones</span>
         </button>
 
         <!-- Ribbon Toggle -->
-        <button onclick="toggleRibbon()" id="ribbonBtn" class="header-btn" title="Set / remove reading ribbon">
-          <svg id="ribbonIconEmpty" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2v20l7-5 7 5V2z"/></svg>
-          <svg id="ribbonIconFull" class="w-5 h-5 hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M5 2v20l7-5 7 5V2z"/></svg>
+        <button onclick="toggleRibbon()" id="ribbonBtn" class="hide-mobile header-btn" title="Set / remove reading ribbon" aria-label="Toggle reading ribbon">
+          <span id="ribbonIconEmpty" class="material-symbols-outlined" aria-hidden="true">push_pin</span>
+          <span id="ribbonIconFull" class="material-symbols-outlined filled hidden" aria-hidden="true">push_pin</span>
+        </button>
+
+        <!-- Bookmark Toggle (nearest verse) -->
+        <button onclick="bookmarkNearestVerse()" id="bookmarkBtn" class="header-btn" title="Bookmark current verse (B)" aria-label="Bookmark current verse" aria-pressed="false">
+          <span id="bookmarkBtnIcon" class="material-symbols-outlined" aria-hidden="true">bookmark</span>
         </button>
 
         <!-- Font Picker -->
         <div class="relative">
-          <button onclick="toggleDropdown('fontDropdown')" class="header-btn" title="Font">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/></svg>
+          <button onclick="toggleDropdown('fontDropdown')" class="header-btn" title="Font" aria-label="Quran font">
+            <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
           </button>
           <div id="fontDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
             <div class="dropdown-label">Quran Font</div>
@@ -79,10 +89,28 @@
           </div>
         </div>
 
+        <!-- Reading Picker (translation / transliteration) -->
+        <div class="relative">
+          <button onclick="toggleDropdown('readingDropdown')" class="header-btn" title="Translation & transliteration" aria-label="Translation and transliteration settings">
+            <span class="material-symbols-outlined" aria-hidden="true">translate</span>
+          </button>
+          <div id="readingDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
+            <div class="dropdown-label">English Translation</div>
+            <div class="dropdown-item" data-translation-opt="off" onclick="setTranslationEdition('off')">Off — Arabic only</div>
+            <div class="dropdown-item" data-translation-opt="eng-ummmuhammad" onclick="setTranslationEdition('eng-ummmuhammad')">Saheeh International</div>
+            <div class="dropdown-item" data-translation-opt="eng-mustafakhattaba" onclick="setTranslationEdition('eng-mustafakhattaba')">The Clear Quran</div>
+            <div class="dropdown-item" data-translation-opt="eng-muftitaqiusmani" onclick="setTranslationEdition('eng-muftitaqiusmani')">Mufti Taqi Usmani</div>
+            <div class="dropdown-label">Transliteration</div>
+            <div class="dropdown-item" id="translitToggle" onclick="toggleTransliteration()">Latin transliteration</div>
+            <div class="dropdown-label">Status</div>
+            <div class="px-3 py-1 text-xs" id="readingStatus" style="color:var(--text-muted)">Arabic only</div>
+          </div>
+        </div>
+
         <!-- Theme Picker -->
         <div class="relative">
-          <button onclick="toggleDropdown('themeDropdown')" class="header-btn" title="Theme">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/></svg>
+          <button onclick="toggleDropdown('themeDropdown')" class="header-btn" title="Theme" aria-label="Color theme">
+            <span class="material-symbols-outlined" aria-hidden="true">palette</span>
           </button>
           <div id="themeDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-48 hidden z-50 p-2">
             <div class="dropdown-label">Color Theme</div>
@@ -94,12 +122,6 @@
             </div>
             <div class="dropdown-item" data-theme-opt="sepia" onclick="setTheme('sepia')">
               <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#f5edd6; border:1px solid #c4b494"></span>Sepia
-            </div>
-            <div class="dropdown-item" data-theme-opt="green" onclick="setTheme('green')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#162a1c; border:1px solid #22c55e"></span>Green
-            </div>
-            <div class="dropdown-item" data-theme-opt="navy" onclick="setTheme('navy')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#111b2e; border:1px solid #3b82f6"></span>Navy
             </div>
           </div>
         </div>
@@ -114,71 +136,95 @@
       <p style="color:var(--text-secondary); font-family:'Amiri',serif" id="loadingText">Loading Quran...</p>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
-    <div id="surahContainer" class="hidden space-y-16"></div>
+    <div id="surahContainer" class="hidden space-y-16">
+      <div id="listSentinel" class="sentinel-loader" aria-hidden="true">
+        <div class="loading-spinner loading-spinner-sm"></div>
+      </div>
+    </div>
   </main>
 
+  <noscript><div style="padding:2rem;text-align:center">This Quran reader requires JavaScript to load verses.</div></noscript>
+
   <!-- Toast -->
-  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden">
+  <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden" role="status" aria-live="polite">
     <div class="toast px-5 py-3 rounded-xl shadow-xl text-sm font-medium" style="background:var(--toast-bg); color:var(--toast-text)"></div>
   </div>
 
   <!-- Mobile Bottom Toolbar -->
   <div id="mobileToolbar" class="visible">
-    <button onclick="adjustFontSize(-1)" title="Smaller font">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+    <button onclick="adjustFontSize(-1)" title="Smaller font" aria-label="Smaller font">
+      <span class="material-symbols-outlined" aria-hidden="true">remove</span>
       <span>Aa-</span>
     </button>
-    <button onclick="adjustFontSize(1)" title="Larger font">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+    <button onclick="adjustFontSize(1)" title="Larger font" aria-label="Larger font">
+      <span class="material-symbols-outlined" aria-hidden="true">add</span>
       <span>Aa+</span>
     </button>
-    <button onclick="toggleRibbon()" title="Ribbon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 2v20l7-5 7 5V2z"/></svg>
+    <button onclick="toggleRibbon()" title="Ribbon" aria-label="Toggle reading ribbon">
+      <span class="material-symbols-outlined" aria-hidden="true">push_pin</span>
       <span>Ribbon</span>
     </button>
-    <button onclick="exportNearestVerse()" title="Export verse">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+    <button onclick="exportNearestVerse()" title="Export verse" aria-label="Export verse">
+      <span class="material-symbols-outlined" aria-hidden="true">share</span>
       <span>Export</span>
     </button>
-    <button onclick="toggleAutoScroll()" title="Auto scroll">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    <button onclick="toggleAutoScroll()" title="Auto scroll" aria-label="Toggle auto scroll">
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_downward</span>
       <span>Scroll</span>
     </button>
-    <button onclick="toggleFullscreen()" title="Fullscreen">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>
+    <button onclick="toggleFullscreen()" title="Fullscreen" aria-label="Toggle fullscreen">
+      <span class="material-symbols-outlined" aria-hidden="true">fullscreen</span>
       <span>Full</span>
     </button>
-    <button onclick="openSidebar()" title="Navigate">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    <button onclick="openSidebar()" title="Navigate" aria-label="Open navigation">
+      <span class="material-symbols-outlined" aria-hidden="true">menu</span>
       <span>Go</span>
     </button>
   </div>
 
   <!-- Auto Scroll Bar -->
   <div id="autoScrollBar">
-    <button onclick="autoScrollDir(-1)" title="Scroll up">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+    <button onclick="autoScrollDir(-1)" title="Scroll up" aria-label="Scroll up">
+      <span class="material-symbols-outlined" aria-hidden="true">keyboard_arrow_up</span>
     </button>
-    <input id="autoScrollSlider" type="range" min="1" max="30" value="3" oninput="setAutoScrollSpeed(this.value)">
+    <input id="autoScrollSlider" type="range" min="1" max="30" value="3" oninput="setAutoScrollSpeed(this.value)" aria-label="Auto scroll speed">
     <span id="autoScrollSpeed">3</span>
-    <button onclick="autoScrollDir(1)" title="Scroll down">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+    <button onclick="autoScrollDir(1)" title="Scroll down" aria-label="Scroll down">
+      <span class="material-symbols-outlined" aria-hidden="true">keyboard_arrow_down</span>
     </button>
-    <button onclick="toggleAutoScroll()" title="Stop auto scroll">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"/></svg>
+    <button onclick="toggleAutoScroll()" title="Stop auto scroll" aria-label="Stop auto scroll">
+      <span class="material-symbols-outlined" aria-hidden="true">pause_circle</span>
     </button>
+  </div>
+
+  <!-- Audio Player Bar -->
+  <div id="audioBar" role="region" aria-label="Recitation player">
+    <button onclick="stopAudio()" title="Close player" aria-label="Stop and close recitation player">
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+    <button onclick="stepAudio(-1)" title="Previous verse" aria-label="Previous verse">
+      <span class="material-symbols-outlined" aria-hidden="true">skip_previous</span>
+    </button>
+    <button onclick="toggleAudioPlay()" id="audioPlayBtn" title="Play / pause (P)" aria-label="Play or pause">
+      <span class="material-symbols-outlined" id="audioPlayIcon" aria-hidden="true">play_arrow</span>
+    </button>
+    <button onclick="stepAudio(1)" title="Next verse" aria-label="Next verse">
+      <span class="material-symbols-outlined" aria-hidden="true">skip_next</span>
+    </button>
+    <div id="audioLabel" class="audio-label" title="Currently playing">—</div>
+    <span class="audio-reciter">Alafasy</span>
   </div>
 
   <!-- Sidebar Overlay -->
   <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 z-50 hidden" style="background:rgba(0,0,0,0.5)" onclick="closeSidebar()"></div>
 
   <!-- Sidebar -->
-  <div id="sidebarPanel" class="sidebar-panel sidebar-bg fixed top-0 left-0 bottom-0 z-50 w-80 shadow-2xl" style="transform:translateX(-100%);overflow-y:auto">
+  <div id="sidebarPanel" role="dialog" aria-modal="true" aria-label="Quran navigation" class="sidebar-panel sidebar-bg fixed top-0 left-0 bottom-0 z-50 w-80 shadow-2xl" style="transform:translateX(-100%);overflow-y:auto">
     <div class="p-5 border-b" style="border-color:var(--border-color)">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-lg font-bold" style="color:var(--text-heading)">Navigate</h2>
-        <button onclick="closeSidebar()" class="header-btn">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        <button onclick="closeSidebar()" class="header-btn" aria-label="Close navigation">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
       </div>
       <!-- Tab bar -->
@@ -189,6 +235,9 @@
         <button data-nav-tab="juz" onclick="switchTab('juz')" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors" style="color:var(--text-secondary)">
           Juz
         </button>
+        <button data-nav-tab="search" onclick="switchTab('search')" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors" style="color:var(--text-secondary)">
+          Search
+        </button>
         <button data-nav-tab="bookmarks" onclick="switchTab('bookmarks')" class="flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors" style="color:var(--text-secondary)">
           Bookmarks
         </button>
@@ -198,8 +247,8 @@
     <!-- Search -->
     <div class="px-5 py-3">
       <div class="relative">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" style="color:var(--text-muted)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <input id="searchInput" onkeyup="handleSearch(event)" class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none" style="background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-color)" placeholder="Search surahs...">
+        <span class="material-symbols-outlined search-glyph" aria-hidden="true">search</span>
+        <input id="searchInput" onkeyup="handleSearch(event)" oninput="handleSearch(event)" aria-label="Search surahs, Juz, or surah:ayah (e.g. 2:255)" class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none" style="background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-color)" placeholder="Search surahs... (try 2:255)">
       </div>
     </div>
 
@@ -210,7 +259,19 @@
 
     <!-- Tab content: Juz list -->
     <div id="tabJuz" class="px-3 pb-4 space-y-1 hidden">
-      <!-- Populated by JS -->
+      <!-- Khatma progress header -->
+      <div id="juzProgress" class="khatma-card"></div>
+      <div id="juzList" class="space-y-1"></div>
+    </div>
+
+    <!-- Tab content: Verse search -->
+    <div id="tabSearch" class="px-3 pb-4 hidden">
+      <div class="relative mb-3">
+        <span class="material-symbols-outlined search-glyph" aria-hidden="true">search</span>
+        <input id="verseSearchInput" oninput="handleVerseSearch()" aria-label="Search Quran text and translation" class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none" style="background:var(--bg-hover); color:var(--text-primary); border:1px solid var(--border-color)" placeholder="Search verses… (e.g. mercy)">
+      </div>
+      <div id="verseSearchMeta" class="text-xs mb-2" style="color:var(--text-muted)">Type at least 2 characters. Searches Arabic text.</div>
+      <div id="verseSearchResults" class="space-y-2"></div>
     </div>
 
     <!-- Tab content: Bookmarks -->
@@ -221,8 +282,8 @@
   </div>
 
   <!-- Fullscreen Exit Button (mobile) -->
-  <button id="fsExitBtn" onclick="toggleFullscreen()" class="hidden fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary)">
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+  <button id="fsExitBtn" onclick="toggleFullscreen()" aria-label="Exit fullscreen" class="hidden fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg" style="background:var(--bg-secondary);border:1px solid var(--border-color);color:var(--text-primary)">
+    <span class="material-symbols-outlined" aria-hidden="true">close</span>
   </button>
 
   <!-- Scripts -->
@@ -230,29 +291,105 @@
   <script src="js/app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
   </script>
   <script>
-    // Populate sidebar lists on load
+    // Populate sidebar lists on load (DocumentFragment, no innerHTML loop)
+    function makeNavRow({ badge, title, subtitle, tag, tagTitle, onGo, check }) {
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors nav-row';
+      row.style.background = 'transparent';
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      row.addEventListener('mouseover', () => row.style.background = 'var(--bg-hover)');
+      row.addEventListener('mouseout', () => row.style.background = 'transparent');
+      row.addEventListener('click', onGo);
+      row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(); } });
+
+      const b = document.createElement('span');
+      b.className = 'w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold';
+      b.style.background = 'var(--bg-nav-active)';
+      b.style.color = 'var(--accent)';
+      b.textContent = badge;
+      row.appendChild(b);
+
+      const mid = document.createElement('div');
+      mid.className = 'flex-1';
+      const t = document.createElement('span');
+      t.className = 'font-medium';
+      t.style.color = 'var(--text-primary)';
+      t.textContent = title;
+      mid.appendChild(t);
+      if (subtitle) {
+        const sub = document.createElement('span');
+        sub.className = 'text-sm';
+        sub.style.color = 'var(--text-muted)';
+        sub.textContent = ' — ' + subtitle;
+        mid.appendChild(sub);
+      }
+      row.appendChild(mid);
+
+      if (tag) {
+        const tagEl = document.createElement('span');
+        tagEl.className = 'text-xs px-2 py-0.5 rounded-full';
+        tagEl.style.background = 'var(--bg-hover)';
+        tagEl.style.color = 'var(--text-muted)';
+        tagEl.textContent = tag;
+        if (tagTitle) tagEl.title = tagTitle;
+        row.appendChild(tagEl);
+      }
+
+      if (check) {
+        const btn = document.createElement('button');
+        btn.className = 'juz-check';
+        btn.title = check.done ? 'Mark Juz as not read' : 'Mark Juz as read';
+        btn.setAttribute('aria-label', `Mark Juz ${check.n} as ${check.done ? 'not read' : 'read'}`);
+        btn.setAttribute('aria-pressed', check.done ? 'true' : 'false');
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined' + (check.done ? ' filled' : '');
+        icon.textContent = check.done ? 'check_circle' : 'circle';
+        btn.appendChild(icon);
+        btn.addEventListener('click', e => { e.stopPropagation(); check.onToggle(); });
+        row.appendChild(btn);
+      }
+      return row;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
       const surahTab = document.getElementById('tabSurah');
+      const surahFrag = document.createDocumentFragment();
       SURAHS.forEach(s => {
-        surahTab.innerHTML += `<div class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors" style="background:transparent" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" onclick="goToSurah(${s.n})">
-          <span class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold" style="background:var(--bg-nav-active); color:var(--accent)">${s.n}</span>
-          <div class="flex-1"><span class="font-medium" style="color:var(--text-primary)">${s.en}</span> <span class="text-sm" style="color:var(--text-muted)">— ${s.name}</span></div>
-          <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--bg-hover);color:var(--text-muted)">${s.type === 'Meccan' ? 'M' : 'Mdn'}</span>
-        </div>`;
+        surahFrag.appendChild(makeNavRow({
+          badge: String(s.n),
+          title: s.en,
+          subtitle: s.name,
+          tag: s.type === 'Meccan' ? 'Makki' : 'Madani',
+          tagTitle: s.type,
+          onGo: () => goToSurah(s.n)
+        }));
       });
+      surahTab.appendChild(surahFrag);
 
-      const juzTab = document.getElementById('tabJuz');
+      const juzList = document.getElementById('juzList');
+      const juzFrag = document.createDocumentFragment();
+      const khatma = typeof getKhatma === 'function' ? getKhatma() : { done: [] };
       JUZ_DATA.forEach(j => {
-        const meta = SURAHS.find(s => s.n === j.from);
-        juzTab.innerHTML += `<div class="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors" style="background:transparent" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'" onclick="goToJuz(${j.n})">
-          <span class="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold" style="background:var(--bg-nav-active); color:var(--accent)">${j.n}</span>
-          <div class="flex-1"><span class="font-medium" style="color:var(--text-primary)">Juz ${j.n}</span> <span class="text-sm" style="color:var(--text-muted)">— ${meta.en}</span></div>
-        </div>`;
+        const meta = SURAHS.find(s => s.n === j.fromSurah);
+        juzFrag.appendChild(makeNavRow({
+          badge: String(j.n),
+          title: `Juz ${j.n}`,
+          subtitle: meta ? `${meta.en} ${j.fromSurah}:${j.fromAyah}` : `${j.fromSurah}:${j.fromAyah}`,
+          onGo: () => goToJuz(j.n),
+          check: {
+            n: j.n,
+            done: !!khatma.done[j.n - 1],
+            onToggle: () => toggleJuzDone(j.n)
+          }
+        }));
       });
+      juzList.appendChild(juzFrag);
+      if (typeof renderJuzProgress === 'function') renderJuzProgress();
     });
   </script>
 </body>
