@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark" data-font="uthman">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="Lightweight offline-capable Quran reader with multiple themes, fonts, bookmarks and Juz navigation.">
   <title>Quran Reader</title>
   <link rel="manifest" href="./manifest.json">
@@ -23,13 +23,13 @@
   <div id="readingProgress"></div>
 
   <!-- Header -->
-  <header class="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b" style="background:var(--bg-header);border-color:var(--border-color)">
-    <div class="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <button onclick="openSidebar()" class="hide-mobile header-btn" title="Menu" aria-label="Open navigation menu" aria-haspopup="dialog">
+  <header class="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b app-header" style="background:var(--bg-header);border-color:var(--border-color)">
+    <div class="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-1 sm:gap-3 min-w-0 header-brand">
+        <button onclick="openSidebar()" class="header-btn" title="Menu" aria-label="Open navigation menu" aria-haspopup="dialog">
           <span class="material-symbols-outlined" aria-hidden="true">menu</span>
         </button>
-        <h1 class="text-lg font-semibold hide-mobile" style="color:var(--text-heading)">The Quran</h1>
+        <h1 class="text-base sm:text-lg font-semibold truncate" style="color:var(--text-heading)">The Quran</h1>
       </div>
       <div class="flex items-center gap-2 header-actions">
         <!-- Scroll to top -->

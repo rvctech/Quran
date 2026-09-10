@@ -1656,8 +1656,10 @@ function showAyaMenu(s, v, meta) {
   menu.id = 'ayaMenu';
   menu.style.cssText = 'position:fixed;z-index:999;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:12px;padding:8px;box-shadow:0 8px 32px rgba(0,0,0,0.4);min-width:160px;';
 
-  const rect = document.querySelector(`[data-s="${s}"][data-v="${v}"] .aya-num`).getBoundingClientRect();
-  menu.style.left = `${Math.min(rect.left, window.innerWidth - 180)}px`;
+  const ayaEl = document.querySelector(`[data-s="${s}"][data-v="${v}"] .aya-num`);
+  const rect = ayaEl ? ayaEl.getBoundingClientRect() : { left: window.innerWidth / 2, bottom: window.innerHeight / 2 };
+  const menuW = Math.min(220, window.innerWidth - 24);
+  menu.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - menuW - 12))}px`;
   menu.style.top = `${rect.bottom + 8}px`;
 
   let items = '';
@@ -1673,6 +1675,13 @@ function showAyaMenu(s, v, meta) {
   }
   menu.innerHTML = items;
   document.body.appendChild(menu);
+
+  // Clamp vertically so the popup never runs under the bottom toolbar
+  const mRect = menu.getBoundingClientRect();
+  const bottomSafe = 90 + (window.innerWidth <= 640 ? 24 : 0);
+  if (mRect.bottom > window.innerHeight - bottomSafe) {
+    menu.style.top = `${Math.max(12, window.innerHeight - mRect.height - bottomSafe)}px`;
+  }
 
   setTimeout(() => {
     document.addEventListener('click', function handler() {
