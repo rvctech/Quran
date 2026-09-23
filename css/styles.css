@@ -1325,10 +1325,6 @@ tajweed.ham_wasl, tajweed.slnt, tajweed.laam_shamsiyah { color: var(--text-muted
 .audio-chip .material-symbols-outlined { font-size: 18px !important; }
 .verse-result mark, .saved-verse mark { background: var(--accent-soft); color: var(--accent); border-radius: 4px; padding: 0 2px; }
 .sajdah-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 0.62em; font-weight: 800; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--border-active); border-radius: 9999px; padding: 1px 8px; margin: 0 0.3em; vertical-align: middle; }
-html.memorize .quran-text { filter: blur(7px); user-select: none; cursor: pointer; }
-html.memorize .verse-wrap.revealed .quran-text, html.memorize .quran-text:focus { filter: none; user-select: text; }
-html.memorize .verse-translit, html.memorize .verse-translation { filter: blur(4px); }
-html.memorize .verse-wrap.revealed .verse-translit, html.memorize .verse-wrap.revealed .verse-translation { filter: none; }
 @media (prefers-contrast: more) {
   .card-bg, .verse-block, .dropdown-panel { border-color: var(--border-active) !important; }
   .header-btn:focus-visible, button:focus-visible { outline-width: 3px !important; }

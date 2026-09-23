@@ -77,7 +77,6 @@ let bookmarkSet = new Set();
 let audioSpeed = 1;
 let audioRepeat = 'off'; // off | one | surah
 let sleepTimerId = null, sleepMinutes = 0;
-let memorizeMode = false;
 let lastFocusedBeforeSidebar = null;
 let deferredInstallPrompt = null;
 let hashSyncEnabled = true;
@@ -156,8 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if ([0.75, 1, 1.25, 1.5, 2].includes(savedSpeed)) audioSpeed = savedSpeed;
   audioRepeat = localStorage.getItem('quran-audio-repeat') || 'off';
   if (!['off', 'one', 'surah'].includes(audioRepeat)) audioRepeat = 'off';
-  memorizeMode = localStorage.getItem('quran-memorize') === '1';
-  if (memorizeMode) document.documentElement.classList.add('memorize');
+  try { localStorage.removeItem('quran-memorize'); } catch (_) {} // retired feature
   initReadingUI();
   updateReciterBadge();
   updateAudioSpeedUI();
@@ -169,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupPWA();
   setupOfflineBanner();
   setupDeepLinks();
-  updateMemorizeUI();
 });
 
 /* Sajdah verses (Hafs, 15 positions incl. 32:15) as "s:v" */
@@ -1394,23 +1391,6 @@ function setupOfflineBanner() {
   update();
 }
 
-/* ========== MEMORIZE ========== */
-function toggleMemorize() {
-  memorizeMode = !memorizeMode;
-  document.documentElement.classList.toggle('memorize', memorizeMode);
-  localStorage.setItem('quran-memorize', memorizeMode ? '1' : '0');
-  updateMemorizeUI();
-  showToast(memorizeMode ? 'Memorization mode on — tap a verse to reveal' : 'Memorization mode off');
-}
-function updateMemorizeUI() {
-  document.getElementById('memorizeToggle')?.classList.toggle('active', memorizeMode);
-}
-document.addEventListener('click', e => {
-  if (!memorizeMode) return;
-  const wrap = e.target.closest?.('.verse-wrap');
-  if (wrap && !e.target.closest?.('.aya-num')) wrap.classList.toggle('revealed');
-});
-
 /* ========== KEYBOARD SHORTCUTS ========== */
 document.addEventListener('keydown', e => {
   const tag = e.target.tagName;
@@ -1443,7 +1423,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'r' || e.key === 'R') { toggleRibbon(); return; }
   if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); return; }
   if (e.key === 'p' || e.key === 'P') { toggleAudioPlay(); return; }
-  if (e.key === 'm' || e.key === 'M') { toggleMemorize(); return; }
   if (e.key === 't' || e.key === 'T') { toggleTajweed(); return; }
 });
 
