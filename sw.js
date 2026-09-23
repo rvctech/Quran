@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-v12';
+const CACHE_NAME = 'quran-v13';
 // Relative URLs so the app works on root and sub-paths (e.g. GitHub Pages)
 const STATIC_ASSETS = [
   './',
@@ -68,7 +68,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (url.hostname.includes('cdn.jsdelivr.net') || url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com') || url.hostname.includes('raw.githubusercontent.com') || url.hostname.includes('db.onlinewebfonts.com') || url.hostname.includes('everyayah.com') || url.hostname.includes('cdn.islamic.network')) {
+  if (url.hostname.includes('cdn.jsdelivr.net') || url.hostname.includes('api.quran.com') || url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com') || url.hostname.includes('raw.githubusercontent.com') || url.hostname.includes('db.onlinewebfonts.com') || url.hostname.includes('everyayah.com') || url.hostname.includes('cdn.islamic.network')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(cache =>
         cache.match(request).then(cached => {

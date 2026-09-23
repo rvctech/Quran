@@ -11,29 +11,37 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="icon" type="image/png" href="./icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Amiri+Quran&family=Noto+Nastaliq+Urdu:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Amiri+Quran&family=Noto+Nastaliq+Urdu:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="min-h-screen">
 
+  <a href="#mainContent" class="skip-link">Skip to Quran text</a>
   <!-- Reading Progress Bar -->
   <div id="readingProgress"></div>
+  <div id="offlineBanner" class="offline-banner hidden" role="status">You are offline — cached text and audio still work. <button onclick="retryLoad()" class="offline-retry">Retry</button></div>
 
   <!-- Header -->
   <header class="fixed top-0 left-0 right-0 z-40 backdrop-blur-md border-b app-header" style="background:var(--bg-header);border-color:var(--border-color)">
     <div class="max-w-4xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
       <div class="flex items-center gap-1 sm:gap-3 min-w-0 header-brand">
-        <button onclick="openSidebar()" class="header-btn" title="Menu" aria-label="Open navigation menu" aria-haspopup="dialog">
+        <button onclick="openSidebar()" id="menuBtn" class="header-btn" title="Menu" aria-label="Open navigation menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="sidebarPanel">
           <span class="material-symbols-outlined" aria-hidden="true">menu</span>
         </button>
         <h1 class="text-base sm:text-lg font-semibold truncate" style="color:var(--text-heading)">The Quran</h1>
       </div>
       <div class="flex items-center gap-2 header-actions">
+        <button onclick="installApp()" id="installBtn" class="hidden header-btn" title="Install app" aria-label="Install Quran app">
+          <span class="material-symbols-outlined" aria-hidden="true">install_mobile</span>
+        </button>
         <!-- Scroll to top -->
-        <button onclick="scrollToTop()" id="goTopBtn" class="hidden header-btn" title="Back to top" aria-label="Back to top">
+        <button onclick="scrollToTop()" id="goTopBtn" class="hidden header-btn" title="Back to top (H)" aria-label="Back to top">
           <span class="material-symbols-outlined" aria-hidden="true">keyboard_arrow_up</span>
         </button>
 
@@ -70,6 +78,11 @@
           <span id="ribbonIconFull" class="material-symbols-outlined filled hidden" aria-hidden="true">push_pin</span>
         </button>
 
+        <!-- Resume last reading -->
+        <button onclick="resumeLastRead()" id="resumeBtn" class="hide-mobile header-btn" title="Resume last reading (H)" aria-label="Resume last reading">
+          <span class="material-symbols-outlined" aria-hidden="true">history</span>
+        </button>
+
         <!-- Bookmark Toggle (nearest verse) -->
         <button onclick="bookmarkNearestVerse()" id="bookmarkBtn" class="header-btn" title="Bookmark current verse (B)" aria-label="Bookmark current verse" aria-pressed="false">
           <span id="bookmarkBtnIcon" class="material-symbols-outlined" aria-hidden="true">bookmark</span>
@@ -77,7 +90,7 @@
 
         <!-- Font Picker -->
         <div class="relative">
-          <button onclick="toggleDropdown('fontDropdown')" class="header-btn" title="Font" aria-label="Quran font">
+          <button onclick="toggleDropdown('fontDropdown')" aria-expanded="false" aria-controls="fontDropdown" class="header-btn" title="Font" aria-label="Quran font">
             <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
           </button>
           <div id="fontDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
@@ -93,10 +106,12 @@
 
         <!-- Reading Picker (translation / transliteration) -->
         <div class="relative">
-          <button onclick="toggleDropdown('readingDropdown')" class="header-btn" title="Translation, reciter & transliteration" aria-label="Translation, reciter and transliteration settings">
+          <button onclick="toggleDropdown('readingDropdown')" aria-expanded="false" aria-controls="readingDropdown" class="header-btn" title="Translation, reciter & transliteration" aria-label="Translation, reciter and transliteration settings">
             <span class="material-symbols-outlined" aria-hidden="true">translate</span>
           </button>
           <div id="readingDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
+            <div class="dropdown-label">Display</div>
+            <div class="dropdown-item" id="memorizeToggle" onclick="toggleMemorize()">Memorization mode (hide text)</div>
             <div class="dropdown-label">English Translation</div>
             <div class="dropdown-item" data-translation-opt="off" onclick="setTranslationEdition('off')">Off — Arabic only</div>
             <div class="dropdown-item" data-translation-opt="eng-ummmuhammad" onclick="setTranslationEdition('eng-ummmuhammad')">Saheeh International</div>
@@ -104,6 +119,18 @@
             <div class="dropdown-item" data-translation-opt="eng-muftitaqiusmani" onclick="setTranslationEdition('eng-muftitaqiusmani')">Mufti Taqi Usmani</div>
             <div class="dropdown-label">Transliteration</div>
             <div class="dropdown-item" id="translitToggle" onclick="toggleTransliteration()">Latin transliteration</div>
+            <div class="dropdown-label">Tajweed</div>
+            <div class="dropdown-item" id="tajweedToggle" onclick="toggleTajweed()">Color-coded tajweed (Hafs)</div>
+            <div class="tajweed-legend" aria-label="Tajweed color legend">
+              <span><i class="tj-dot tj-madd"></i>Madd</span>
+              <span><i class="tj-dot tj-ghunnah"></i>Ghunnah</span>
+              <span><i class="tj-dot tj-idgham"></i>Idgham</span>
+              <span><i class="tj-dot tj-ikhafa"></i>Ikhfa</span>
+              <span><i class="tj-dot tj-qalqalah"></i>Qalqalah</span>
+              <span><i class="tj-dot tj-iqlab"></i>Iqlab</span>
+              <span><i class="tj-dot tj-silent"></i>Silent</span>
+            </div>
+            <p class="tajweed-note">Authoritative Hafs markup from Quran.com. Fetched once per surah, then works offline. Key: <kbd>T</kbd></p>
             <div class="dropdown-label">Reciter</div>
             <div class="dropdown-item" data-reciter-opt="alafasy" onclick="setReciter('alafasy')">Mishary Alafasy</div>
             <div class="dropdown-item" data-reciter-opt="basit-murattal" onclick="setReciter('basit-murattal')">Abdul Basit — Murattal</div>
@@ -118,7 +145,7 @@
 
         <!-- Theme Picker -->
         <div class="relative">
-          <button onclick="toggleDropdown('themeDropdown')" class="header-btn" title="Theme" aria-label="Color theme">
+          <button onclick="toggleDropdown('themeDropdown')" aria-expanded="false" aria-controls="themeDropdown" class="header-btn" title="Theme" aria-label="Color theme">
             <span class="material-symbols-outlined" aria-hidden="true">palette</span>
           </button>
           <div id="themeDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-48 hidden z-50 p-2">
@@ -132,6 +159,21 @@
             <div class="dropdown-item" data-theme-opt="sepia" onclick="setTheme('sepia')">
               <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#f5edd6; border:1px solid #c4b494"></span>Sepia
             </div>
+            <div class="dropdown-item" data-theme-opt="oled" onclick="setTheme('oled')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#000000; border:1px solid #525252"></span>OLED Black
+            </div>
+            <div class="dropdown-item" data-theme-opt="emerald" onclick="setTheme('emerald')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#0c1f18; border:1px solid #17b890"></span>Emerald
+            </div>
+            <div class="dropdown-item" data-theme-opt="midnight" onclick="setTheme('midnight')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#0b1526; border:1px solid #4f8ff7"></span>Midnight Blue
+            </div>
+            <div class="dropdown-item" data-theme-opt="contrast" onclick="setTheme('contrast')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#000000; border:1px solid #ffd60a"></span>High Contrast
+            </div>
+            <div class="dropdown-item" data-theme-opt="parchment" onclick="setTheme('parchment')">
+              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#f6efdd; border:1px solid #9a6b23"></span>Parchment
+            </div>
           </div>
         </div>
       </div>
@@ -144,6 +186,10 @@
       <div class="loading-spinner"></div>
       <p style="color:var(--text-secondary); font-family:'Amiri',serif" id="loadingText">Loading Quran...</p>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="w-full max-w-4xl mt-6 space-y-4" aria-hidden="true" style="max-width:56rem;width:100%">
+        <div class="skel-card"><div class="skel" style="height:1.4rem;width:45%;margin:0 auto 1rem"></div><div class="skel" style="height:0.9rem;width:70%;margin:0 auto 1.4rem"></div><div class="skel" style="height:5rem;width:100%"></div></div>
+        <div class="skel-card"><div class="skel" style="height:5rem;width:100%"></div></div>
+      </div>
     </div>
     <div id="surahContainer" class="hidden space-y-16">
       <div id="listSentinel" class="sentinel-loader" aria-hidden="true">
@@ -158,6 +204,12 @@
   <div id="toast" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden" role="status" aria-live="polite">
     <div class="toast px-5 py-3 rounded-xl shadow-xl text-sm font-medium" style="background:var(--toast-bg); color:var(--toast-text)"></div>
   </div>
+  <div id="resumePill" class="resume-pill hidden" role="status">
+    <button onclick="resumeLastRead()" class="resume-btn"><span class="material-symbols-outlined" aria-hidden="true">history</span><span id="resumeText">Resume</span></button>
+    <button onclick="dismissResume()" class="resume-x" aria-label="Dismiss resume">✕</button>
+  </div>
+  <div id="updateBanner" class="update-banner hidden" role="status"><span>New version available.</span><button onclick="applyUpdate()" class="offline-retry">Reload</button></div>
+  <button id="floatingTop" onclick="scrollToTop()" class="floating-top hidden" aria-label="Back to top"><span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span></button>
 
   <!-- Mobile Bottom Toolbar -->
   <div id="mobileToolbar" class="visible">
@@ -172,6 +224,10 @@
     <button onclick="toggleRibbon()" title="Ribbon" aria-label="Toggle reading ribbon">
       <span class="material-symbols-outlined" aria-hidden="true">push_pin</span>
       <span>Ribbon</span>
+    </button>
+    <button onclick="resumeLastRead()" title="Resume last reading" aria-label="Resume last reading">
+      <span class="material-symbols-outlined" aria-hidden="true">history</span>
+      <span>Resume</span>
     </button>
     <button onclick="exportNearestVerse()" title="Export verse" aria-label="Export verse">
       <span class="material-symbols-outlined" aria-hidden="true">share</span>
@@ -221,6 +277,9 @@
       <span class="material-symbols-outlined" aria-hidden="true">skip_next</span>
     </button>
     <div id="audioLabel" class="audio-label" title="Currently playing">—</div>
+    <button onclick="cycleAudioSpeed()" id="audioSpeedBtn" class="audio-chip" title="Playback speed" aria-label="Playback speed">1×</button>
+    <button onclick="cycleAudioRepeat()" id="audioRepeatBtn" class="audio-chip" title="Repeat mode" aria-label="Repeat mode"><span class="material-symbols-outlined" aria-hidden="true">repeat</span></button>
+    <button onclick="cycleSleepTimer()" id="audioSleepBtn" class="audio-chip" title="Sleep timer" aria-label="Sleep timer"><span class="material-symbols-outlined" aria-hidden="true">bedtime</span></button>
     <button id="reciterBtn" onclick="toggleReciterMenu(event)" title="Change reciter" aria-label="Change reciter" aria-haspopup="menu">
       <span class="audio-reciter" id="reciterBadge">Alafasy</span>
       <span class="material-symbols-outlined reciter-caret" aria-hidden="true">arrow_drop_down</span>
@@ -306,21 +365,18 @@
   <!-- Scripts -->
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    }
-  </script>
+  <!-- SW registration handled in app.js setupPWA (update banner + install prompt) -->
   <script>
     // Populate sidebar lists on load (DocumentFragment, no innerHTML loop)
-    function makeNavRow({ badge, title, subtitle, tag, tagTitle, onGo, check }) {
+    function makeNavRow({ badge, title, subtitle, tag, tagTitle, onGo, check, surah }) {
       const row = document.createElement('div');
       row.className = 'flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-colors nav-row';
       row.style.background = 'transparent';
       row.setAttribute('role', 'button');
       row.setAttribute('tabindex', '0');
-      row.addEventListener('mouseover', () => row.style.background = 'var(--bg-hover)');
-      row.addEventListener('mouseout', () => row.style.background = 'transparent');
+      if (surah) row.dataset.surahRow = String(surah);
+      row.addEventListener('mouseover', () => { if (!row.classList.contains('current')) row.style.background = 'var(--bg-hover)'; });
+      row.addEventListener('mouseout', () => { if (!row.classList.contains('current')) row.style.background = 'transparent'; });
       row.addEventListener('click', onGo);
       row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onGo(); } });
 
@@ -383,6 +439,7 @@
           subtitle: s.name,
           tag: s.type === 'Meccan' ? 'Makki' : 'Madani',
           tagTitle: s.type,
+          surah: s.n,
           onGo: () => goToSurah(s.n)
         }));
       });
