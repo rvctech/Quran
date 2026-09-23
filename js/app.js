@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedTheme = localStorage.getItem('quran-theme') || 'dark';
   setTheme(savedTheme, false);
 
-  const savedFont = localStorage.getItem('quran-font') || 'uthman';
+  const savedFont = localStorage.getItem('quran-font') || 'amiri';
   setFont(savedFont, false);
 
   fontScale = parseInt(localStorage.getItem('quran-fontscale'), 10) || 100;
@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ========== THEME / FONT ========== */
 const THEMES = ['dark', 'light', 'sepia'];
+const FONTS = ['uthman', 'scheherazade', 'amiri', 'amiri-classic', 'indopak', 'lpmq'];
 
 function setTheme(theme, save = true) {
   if (!THEMES.includes(theme)) theme = 'dark';
@@ -152,6 +153,7 @@ function setTheme(theme, save = true) {
 }
 
 function setFont(font, save = true) {
+  if (!FONTS.includes(font)) font = 'amiri';
   document.documentElement.setAttribute('data-font', font);
   if (save) localStorage.setItem('quran-font', font);
   document.querySelectorAll('[data-font-opt]').forEach(el => {
@@ -389,6 +391,38 @@ function shouldShowBismillah(n) {
   return n !== 1 && n !== 9;
 }
 
+/* ========== RUB EL HIZB (authoritative table in js/data.js, not embedded ۞) ========== */
+// The API text embeds U+06DE at 199 verse starts and omits it at the 41 quarters that
+// coincide with a surah start; it also misplaces Rub 106 at 15:49 instead of 15:50.
+// So we strip the embedded char everywhere and render markers from RUB_DATA instead.
+function cleanVerseText(t) {
+  return String(t == null ? '' : t).replace(/۞/g, '');
+}
+
+let RUB_LOOKUP = null;
+function rubLookup() {
+  if (RUB_LOOKUP) return RUB_LOOKUP;
+  RUB_LOOKUP = new Map();
+  if (typeof RUB_DATA !== 'undefined') {
+    RUB_DATA.forEach(r => RUB_LOOKUP.set(`${r.surah}:${r.ayah}`, r));
+  }
+  return RUB_LOOKUP;
+}
+
+function getRubInfo(s, v) {
+  return rubLookup().get(`${s}:${v}`) || null;
+}
+
+const RUB_Q_LABELS = { 1: 'Hizb', 2: '¼ Hizb', 3: '½ Hizb', 4: '¾ Hizb' };
+
+function rubMarkerHtml(rub) {
+  if (!rub) return '';
+  const part = RUB_Q_LABELS[rub.q] || '';
+  const label = `Rub el Hizb ${rub.n} • Juz ${rub.juz} • Hizb ${rub.hizb} (${part}) — ${rub.surah}:${rub.ayah}`;
+  const kind = rub.q === 1 ? 'rub-hizb' : 'rub-quarter';
+  return `<div class="rub-marker ${kind}" title="${label}" role="separator" aria-label="${label}"><span class="rub-glyph" aria-hidden="true">۞</span></div>`;
+}
+
 function renderSurah(n) {
   const meta = getSurahMeta(n);
   const verses = quranData[n];
@@ -414,8 +448,9 @@ function renderSurah(n) {
     verses.forEach(v => {
       const isRibboned = ribbonSurah === n && ribbonAyah === v.verse;
       const isBookmarked = bookmarkSet.has(`${n}:${v.verse}`);
+      html += rubMarkerHtml(getRubInfo(n, v.verse));
       html += `<span class="verse-wrap${isRibboned ? ' ribbon-verse' : ''}" data-s="${n}" data-v="${v.verse}">`;
-      html += v.text;
+      html += cleanVerseText(v.text);
       html += `<span class="aya-num" onclick="handleAyaClick(event,${n},${v.verse})" title="Click to bookmark/ribbon">`;
       html += `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" stroke-width="1.5" fill="none" stroke="var(--verse-num-fill)"/>`;
       html += `<circle cx="20" cy="20" r="18" fill="var(--verse-num-fill)" opacity="0.4"/></svg>`;
@@ -450,9 +485,10 @@ function renderVerseBlocks(n, verses) {
     const isBookmarked = bookmarkSet.has(`${n}:${v.verse}`);
     const translit = showTransliteration ? getTranslitText(n, v.verse) : null;
     const translation = showTranslation ? getTranslationText(n, v.verse) : null;
+    html += rubMarkerHtml(getRubInfo(n, v.verse));
     html += `<div class="verse-wrap verse-block${isRibboned ? ' ribbon-verse' : ''}" data-s="${n}" data-v="${v.verse}">`;
     html += `<div class="quran-text verse-ar" lang="ar" dir="rtl" style="color:var(--text-primary)">`;
-    html += v.text;
+    html += cleanVerseText(v.text);
     html += `<span class="aya-num" onclick="handleAyaClick(event,${n},${v.verse})" title="Click to bookmark/ribbon">`;
     html += `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="18" stroke-width="1.5" fill="none" stroke="var(--verse-num-fill)"/>`;
     html += `<circle cx="20" cy="20" r="18" fill="var(--verse-num-fill)" opacity="0.4"/></svg>`;
@@ -1279,7 +1315,7 @@ function loadBookmarks() {
         ar.className = 'saved-verse-ar';
         ar.setAttribute('dir', 'rtl');
         ar.setAttribute('lang', 'ar');
-        ar.textContent = verse.text;
+        ar.textContent = cleanVerseText(verse.text);
         card.appendChild(ar);
 
         if (showTranslation) {
@@ -1551,7 +1587,7 @@ function buildSearchIndex() {
   const idx = [];
   for (let s = 1; s <= 114; s++) {
     (quranData[s] || []).forEach(v => {
-      idx.push({ s, v: v.verse, ar: normalizeArabic(v.text), raw: v.text });
+      idx.push({ s, v: v.verse, ar: normalizeArabic(cleanVerseText(v.text)), raw: cleanVerseText(v.text) });
     });
   }
   searchIndexCache = idx;
@@ -1692,7 +1728,7 @@ function showAyaMenu(s, v, meta) {
 }
 
 function buildVerseExportText(s, v, verse, meta, withNumbers = true) {
-  let text = verse.text;
+  let text = cleanVerseText(verse.text);
   if (showTransliteration) {
     const t = getTranslitText(s, v);
     if (t) text += `\n\n${t}`;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'quran-v5';
+const CACHE_NAME = 'quran-v12';
 // Relative URLs so the app works on root and sub-paths (e.g. GitHub Pages)
 const STATIC_ASSETS = [
   './',

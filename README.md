@@ -4,7 +4,7 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 
 ## Features
 
-- **Multiple Fonts** — KFGQPC Uthmanic Hafs, Amiri Quran, IndoPak/Nastaleeq, LPMQ Isep Misbah
+- **Multiple Fonts** — QPC Uthmani Hafs, Scheherazade New, Amiri Quran, Amiri, IndoPak/Nastaleeq, LPMQ Isep Misbah
 - **3 Color Themes** — Dark, Light, Sepia
 - **Surah & Juz Navigation** — sidebar with surah search, exact Juz start positions, and swipe support
 - **Offline Support (PWA)** — installable, works offline after first load via service worker
