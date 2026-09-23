@@ -134,6 +134,11 @@ function refreshBookmarkCache() {
 
 /* ========== INIT ========== */
 document.addEventListener('DOMContentLoaded', () => {
+  // Always start at the top on (re)load: the browser's scroll restoration
+  // would otherwise drop you mid-list (e.g. surah 2) once verses mount async.
+  // Explicit jumps (deep links #/s/v, resume, Juz/Surah nav) still scroll themselves.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
   const savedTheme = localStorage.getItem('quran-theme') || 'dark';
   setTheme(savedTheme, false);
 
