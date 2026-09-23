@@ -34,7 +34,10 @@
         <button onclick="openSidebar()" id="menuBtn" class="header-btn" title="Menu" aria-label="Open navigation menu" aria-haspopup="dialog" aria-expanded="false" aria-controls="sidebarPanel">
           <span class="material-symbols-outlined" aria-hidden="true">menu</span>
         </button>
-        <h1 class="text-base sm:text-lg font-semibold truncate" style="color:var(--text-heading)">The Quran</h1>
+        <div class="header-brand-copy">
+          <h1 class="text-base sm:text-lg font-semibold truncate" style="color:var(--text-heading)">The Quran</h1>
+          <span id="currentReference" class="current-reference" aria-label="Current reading position">Quran</span>
+        </div>
       </div>
       <div class="flex items-center gap-2 header-actions">
         <button onclick="installApp()" id="installBtn" class="hidden header-btn" title="Install app" aria-label="Install Quran app">

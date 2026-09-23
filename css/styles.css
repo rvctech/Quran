@@ -252,10 +252,26 @@ main {
   padding-right: env(safe-area-inset-right, 0px);
 }
 .header-brand { flex-shrink: 1; min-width: 0; }
+.header-brand-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .header-brand h1 {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.current-reference {
+  display: block;
+  max-width: min(26vw, 15rem);
+  overflow: hidden;
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
 ::-webkit-scrollbar { width: 6px; }
@@ -478,6 +494,7 @@ main {
 @media (max-width: 640px) {
   header .max-w-4xl { justify-content: space-between; }
   .header-brand h1 { max-width: 28vw; font-size: 1rem; }
+  .header-brand-copy, .current-reference { max-width: 36vw; }
   .header-actions {
     overflow: visible;
     max-width: none;

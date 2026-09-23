@@ -66,6 +66,22 @@ function getCenterVerse() {
   return best;
 }
 
+let lastCurrentReference = '';
+function updateCurrentReference() {
+  const indicator = document.getElementById('currentReference');
+  if (!indicator) return;
+  const best = getCenterVerse();
+  const surah = best?.dataset.s;
+  const ayah = best?.dataset.v;
+  const meta = surah ? getSurahMeta(Number(surah)) : null;
+  const reference = meta ? `${meta.en} ${surah}:${ayah}` : 'Quran';
+  if (reference === lastCurrentReference) return;
+  lastCurrentReference = reference;
+  indicator.textContent = reference;
+  indicator.title = reference;
+  indicator.setAttribute('aria-label', `Current reading position: ${reference}`);
+}
+
 /* Clipboard with fallback for non-secure contexts / denied permissions */
 function copyTextWithFallback(text) {
   if (navigator.clipboard && window.isSecureContext !== false) {
@@ -670,7 +686,7 @@ function renderSurah(n) {
   html += `<div class="surah-num-star" title="Surah ${meta.n}">${meta.n}</div>`;
   html += `<h2 class="surah-name-ar text-3xl sm:text-4xl">${meta.name}</h2>`;
   html += `<h3 class="surah-name-en text-base sm:text-lg">${meta.en}</h3>`;
-  html += `<div class="surah-meta-pills"><span>${meta.type}</span><span>${meta.verses} Ayahs</span>${juzInfo ? `<span>Juz ${juzInfo.n}</span>` : ''}</div>`;
+  html += `<div class="surah-meta-pills"><span>${meta.type}</span><span>${meta.verses} Ayahs</span>${juzInfo ? `<span>${juzInfo.label}</span>` : ''}</div>`;
   html += `</div></div>`;
 
   if (shouldShowBismillah(n)) {
@@ -830,6 +846,7 @@ function resetVirtualList() {
   const end = Math.min(114, SURAHS_INITIAL_BATCH);
   for (let i = 1; i <= end; i++) mountSurah(i);
   observeSentinel();
+  requestAnimationFrame(updateCurrentReference);
 }
 
 // Back-compat: old code called loadVisibleSurahs() to mean "make sure all is rendered".
@@ -861,6 +878,7 @@ function handleScroll() {
   const docHeight = document.documentElement.scrollHeight - window.innerHeight;
   const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
   document.getElementById('readingProgress').style.width = pct + '%';
+  updateCurrentReference();
   document.getElementById('goTopBtn').classList.toggle('hidden', scrollTop < 600);
   document.getElementById('floatingTop')?.classList.toggle('hidden', scrollTop < 600);
   clearTimeout(scrollSaveTimer);
@@ -2295,11 +2313,25 @@ function showToast(msg) {
 }
 
 /* ========== JUZ NAV ========== */
-function getJuzInfo(surah) {
-  for (const j of JUZ_DATA) {
-    if (surah >= j.from && surah <= j.to) {
-      return { n: j.n, startSurah: j.fromSurah || j.from, startAyah: j.fromAyah || 1 };
-    }
+function getJuzNumberAt(surah, ayah) {
+  for (let i = JUZ_DATA.length - 1; i >= 0; i--) {
+    const juz = JUZ_DATA[i];
+    const startSurah = juz.fromSurah || juz.from;
+    const startAyah = juz.fromAyah || 1;
+    if (surah > startSurah || (surah === startSurah && ayah >= startAyah)) return juz.n;
   }
-  return { n: 30, startSurah: 78, startAyah: 1 };
+  return 1;
+}
+
+function getJuzInfo(surah) {
+  const meta = SURAHS.find(item => item.n === surah);
+  if (!meta) return { n: 30, start: 30, end: 30, label: 'Juz 30' };
+  const start = getJuzNumberAt(surah, 1);
+  const end = getJuzNumberAt(surah, meta.verses);
+  return {
+    n: start,
+    start,
+    end,
+    label: start === end ? `Juz ${start}` : `Juz ${start}–${end}`,
+  };
 }
