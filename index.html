@@ -51,17 +51,6 @@
           <span id="fsIconShrink" class="material-symbols-outlined hidden" aria-hidden="true">fullscreen_exit</span>
         </button>
 
-        <!-- Font Size (hidden on mobile, shown in bottom toolbar) -->
-        <div class="hide-mobile flex items-center gap-0.5">
-          <button onclick="adjustFontSize(-1)" class="header-btn" title="Decrease font size (−)" aria-label="Decrease font size">
-            <span class="material-symbols-outlined" aria-hidden="true">remove</span>
-          </button>
-          <span id="fontSizeLabel" class="text-xs w-8 text-center" style="color:var(--text-muted)">100</span>
-          <button onclick="adjustFontSize(1)" class="header-btn" title="Increase font size (+)" aria-label="Increase font size">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span>
-          </button>
-        </div>
-
         <!-- Auto Scroll (hidden on mobile, shown in bottom toolbar) -->
         <button onclick="toggleAutoScroll()" id="autoScrollToggle" class="hide-mobile header-btn" title="Auto scroll (Space)" aria-label="Toggle auto scroll" aria-pressed="false">
           <span class="material-symbols-outlined" aria-hidden="true">arrow_downward</span>
@@ -88,90 +77,116 @@
           <span id="bookmarkBtnIcon" class="material-symbols-outlined" aria-hidden="true">bookmark</span>
         </button>
 
-        <!-- Font Picker -->
         <div class="relative">
-          <button onclick="toggleDropdown('fontDropdown')" aria-expanded="false" aria-controls="fontDropdown" class="header-btn" title="Font" aria-label="Quran font">
-            <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
+          <button onclick="toggleDropdown('settingsDropdown')" aria-expanded="false" aria-controls="settingsDropdown" class="header-btn" title="Settings" aria-label="Open settings" aria-haspopup="dialog">
+            <span class="material-symbols-outlined" aria-hidden="true">settings</span>
           </button>
-          <div id="fontDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
-            <div class="dropdown-label">Quran Font</div>
-            <div class="dropdown-item" data-font-opt="uthman" onclick="setFont('uthman')">QPC Uthmani Hafs</div>
-            <div class="dropdown-item" data-font-opt="scheherazade" onclick="setFont('scheherazade')">Scheherazade New</div>
-            <div class="dropdown-item active" data-font-opt="amiri" onclick="setFont('amiri')">Amiri Quran</div>
-            <div class="dropdown-item" data-font-opt="amiri-classic" onclick="setFont('amiri-classic')">Amiri</div>
-            <div class="dropdown-item" data-font-opt="indopak" onclick="setFont('indopak')">IndoPak / Nastaleeq</div>
-            <div class="dropdown-item" data-font-opt="lpmq" onclick="setFont('lpmq')">LPMQ Isep Misbah</div>
-          </div>
-        </div>
+          <div id="settingsDropdown" class="dropdown-panel settings-panel absolute right-0 top-full mt-2 hidden z-50" role="dialog" aria-label="Settings">
+            <div class="settings-heading">
+              <div>
+                <div class="settings-title">Settings</div>
+                <div class="settings-subtitle">Reading and display preferences</div>
+              </div>
+              <button onclick="closeDropdowns(true)" class="settings-close" aria-label="Close settings">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              </button>
+            </div>
 
-        <!-- Reading Picker (translation / transliteration) -->
-        <div class="relative">
-          <button onclick="toggleDropdown('readingDropdown')" aria-expanded="false" aria-controls="readingDropdown" class="header-btn" title="Translation, reciter & transliteration" aria-label="Translation, reciter and transliteration settings">
-            <span class="material-symbols-outlined" aria-hidden="true">translate</span>
-          </button>
-          <div id="readingDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-56 hidden z-50 p-2">
-            <div class="dropdown-label">English Translation</div>
-            <div class="dropdown-item" data-translation-opt="off" onclick="setTranslationEdition('off')">Off — Arabic only</div>
-            <div class="dropdown-item" data-translation-opt="eng-ummmuhammad" onclick="setTranslationEdition('eng-ummmuhammad')">Saheeh International</div>
-            <div class="dropdown-item" data-translation-opt="eng-mustafakhattaba" onclick="setTranslationEdition('eng-mustafakhattaba')">The Clear Quran</div>
-            <div class="dropdown-item" data-translation-opt="eng-muftitaqiusmani" onclick="setTranslationEdition('eng-muftitaqiusmani')">Mufti Taqi Usmani</div>
-            <div class="dropdown-label">Transliteration</div>
-            <div class="dropdown-item" id="translitToggle" onclick="toggleTransliteration()">Latin transliteration</div>
-            <div class="dropdown-label">Tajweed</div>
-            <div class="dropdown-item" id="tajweedToggle" onclick="toggleTajweed()">Color-coded tajweed (Hafs)</div>
-            <div class="tajweed-legend" aria-label="Tajweed color legend">
-              <span><i class="tj-dot tj-madd"></i>Madd</span>
-              <span><i class="tj-dot tj-ghunnah"></i>Ghunnah</span>
-              <span><i class="tj-dot tj-idgham"></i>Idgham</span>
-              <span><i class="tj-dot tj-ikhafa"></i>Ikhfa</span>
-              <span><i class="tj-dot tj-qalqalah"></i>Qalqalah</span>
-              <span><i class="tj-dot tj-iqlab"></i>Iqlab</span>
-              <span><i class="tj-dot tj-silent"></i>Silent</span>
-            </div>
-            <p class="tajweed-note">Authoritative Hafs markup from Quran.com. Fetched once per surah, then works offline. Key: <kbd>T</kbd></p>
-            <div class="dropdown-label">Reciter</div>
-            <div class="dropdown-item" data-reciter-opt="alafasy" onclick="setReciter('alafasy')">Mishary Alafasy</div>
-            <div class="dropdown-item" data-reciter-opt="basit-murattal" onclick="setReciter('basit-murattal')">Abdul Basit — Murattal</div>
-            <div class="dropdown-item" data-reciter-opt="basit-mujawwad" onclick="setReciter('basit-mujawwad')">Abdul Basit — Mujawwad</div>
-            <div class="dropdown-item" data-reciter-opt="sudais" onclick="setReciter('sudais')">As-Sudais</div>
-            <div class="dropdown-item" data-reciter-opt="muaiqly" onclick="setReciter('muaiqly')">Maher Al-Muaiqly</div>
-            <div class="dropdown-item" data-reciter-opt="shuraym" onclick="setReciter('shuraym')">Saood ash-Shuraym</div>
-            <div class="dropdown-label">Status</div>
-            <div class="px-3 py-1 text-xs" id="readingStatus" style="color:var(--text-muted)">Arabic only</div>
-          </div>
-        </div>
+            <section class="settings-section">
+              <div class="settings-section-title">Display</div>
+              <div class="settings-field">
+                <span>Arabic size</span>
+                <span class="settings-stepper">
+                  <button onclick="adjustFontSize(-1)" class="settings-control" aria-label="Decrease Arabic text size"><span class="material-symbols-outlined" aria-hidden="true">remove</span></button>
+                  <output id="fontSizeLabel" aria-label="Current Arabic text size">100%</output>
+                  <button onclick="adjustFontSize(1)" class="settings-control" aria-label="Increase Arabic text size"><span class="material-symbols-outlined" aria-hidden="true">add</span></button>
+                </span>
+              </div>
+              <details class="settings-choice">
+                <summary><span>Quran font</span><span id="settingsFontValue">Amiri Quran</span></summary>
+                <div class="settings-options">
+                  <button class="dropdown-item" data-font-opt="uthman" onclick="setFont('uthman');this.closest('details').removeAttribute('open')">QPC Uthmani Hafs</button>
+                  <button class="dropdown-item" data-font-opt="scheherazade" onclick="setFont('scheherazade');this.closest('details').removeAttribute('open')">Scheherazade New</button>
+                  <button class="dropdown-item active" data-font-opt="amiri" onclick="setFont('amiri');this.closest('details').removeAttribute('open')">Amiri Quran</button>
+                  <button class="dropdown-item" data-font-opt="amiri-classic" onclick="setFont('amiri-classic');this.closest('details').removeAttribute('open')">Amiri</button>
+                  <button class="dropdown-item" data-font-opt="indopak" onclick="setFont('indopak');this.closest('details').removeAttribute('open')">IndoPak / Nastaleeq</button>
+                  <button class="dropdown-item" data-font-opt="lpmq" onclick="setFont('lpmq');this.closest('details').removeAttribute('open')">LPMQ Isep Misbah</button>
+                </div>
+              </details>
+              <details class="settings-choice">
+                <summary><span>Color theme</span><span id="settingsThemeValue">Dark</span></summary>
+                <div class="settings-options">
+                  <button class="dropdown-item active" data-theme-opt="dark" onclick="setTheme('dark');this.closest('details').removeAttribute('open')">Dark</button>
+                  <button class="dropdown-item" data-theme-opt="light" onclick="setTheme('light');this.closest('details').removeAttribute('open')">Light</button>
+                  <button class="dropdown-item" data-theme-opt="sepia" onclick="setTheme('sepia');this.closest('details').removeAttribute('open')">Sepia</button>
+                  <button class="dropdown-item" data-theme-opt="oled" onclick="setTheme('oled');this.closest('details').removeAttribute('open')">OLED Black</button>
+                  <button class="dropdown-item" data-theme-opt="emerald" onclick="setTheme('emerald');this.closest('details').removeAttribute('open')">Emerald</button>
+                  <button class="dropdown-item" data-theme-opt="midnight" onclick="setTheme('midnight');this.closest('details').removeAttribute('open')">Midnight Blue</button>
+                  <button class="dropdown-item" data-theme-opt="contrast" onclick="setTheme('contrast');this.closest('details').removeAttribute('open')">High Contrast</button>
+                  <button class="dropdown-item" data-theme-opt="parchment" onclick="setTheme('parchment');this.closest('details').removeAttribute('open')">Parchment</button>
+                </div>
+              </details>
+            </section>
 
-        <!-- Theme Picker -->
-        <div class="relative">
-          <button onclick="toggleDropdown('themeDropdown')" aria-expanded="false" aria-controls="themeDropdown" class="header-btn" title="Theme" aria-label="Color theme">
-            <span class="material-symbols-outlined" aria-hidden="true">palette</span>
-          </button>
-          <div id="themeDropdown" class="dropdown-panel absolute right-0 top-full mt-2 w-48 hidden z-50 p-2">
-            <div class="dropdown-label">Color Theme</div>
-            <div class="dropdown-item active" data-theme-opt="dark" onclick="setTheme('dark')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#292524; border:1px solid #57534e"></span>Dark
-            </div>
-            <div class="dropdown-item" data-theme-opt="light" onclick="setTheme('light')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#ffffff; border:1px solid #d6d3d1"></span>Light
-            </div>
-            <div class="dropdown-item" data-theme-opt="sepia" onclick="setTheme('sepia')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#f5edd6; border:1px solid #c4b494"></span>Sepia
-            </div>
-            <div class="dropdown-item" data-theme-opt="oled" onclick="setTheme('oled')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#000000; border:1px solid #525252"></span>OLED Black
-            </div>
-            <div class="dropdown-item" data-theme-opt="emerald" onclick="setTheme('emerald')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#0c1f18; border:1px solid #17b890"></span>Emerald
-            </div>
-            <div class="dropdown-item" data-theme-opt="midnight" onclick="setTheme('midnight')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#0b1526; border:1px solid #4f8ff7"></span>Midnight Blue
-            </div>
-            <div class="dropdown-item" data-theme-opt="contrast" onclick="setTheme('contrast')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#000000; border:1px solid #ffd60a"></span>High Contrast
-            </div>
-            <div class="dropdown-item" data-theme-opt="parchment" onclick="setTheme('parchment')">
-              <span class="inline-block w-3 h-3 rounded-full mr-2 align-middle" style="background:#f6efdd; border:1px solid #9a6b23"></span>Parchment
-            </div>
+            <section class="settings-section">
+              <div class="settings-section-title">Reading</div>
+              <details class="settings-choice">
+                <summary><span>Translation</span><span id="settingsTranslationValue">Off — Arabic only</span></summary>
+                <div class="settings-options">
+                  <button class="dropdown-item active" data-translation-opt="off" onclick="setTranslationEdition('off');this.closest('details').removeAttribute('open')">Off — Arabic only</button>
+                  <button class="dropdown-item" data-translation-opt="eng-ummmuhammad" onclick="setTranslationEdition('eng-ummmuhammad');this.closest('details').removeAttribute('open')">Saheeh International</button>
+                  <button class="dropdown-item" data-translation-opt="eng-mustafakhattaba" onclick="setTranslationEdition('eng-mustafakhattaba');this.closest('details').removeAttribute('open')">The Clear Quran</button>
+                  <button class="dropdown-item" data-translation-opt="eng-muftitaqiusmani" onclick="setTranslationEdition('eng-muftitaqiusmani');this.closest('details').removeAttribute('open')">Mufti Taqi Usmani</button>
+                </div>
+              </details>
+              <div class="settings-field">
+                <span>Translation size</span>
+                <span class="settings-stepper">
+                  <button onclick="adjustTranslationSize(-1)" class="settings-control" aria-label="Decrease translation text size"><span class="material-symbols-outlined" aria-hidden="true">remove</span></button>
+                  <output id="translationSizeLabel" aria-label="Current translation text size">100%</output>
+                  <button onclick="adjustTranslationSize(1)" class="settings-control" aria-label="Increase translation text size"><span class="material-symbols-outlined" aria-hidden="true">add</span></button>
+                </span>
+              </div>
+              <button id="translitToggle" onclick="toggleTransliteration()" class="dropdown-item settings-toggle" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">translate</span>Latin transliteration
+              </button>
+              <div class="settings-field">
+                <span>Transliteration size</span>
+                <span class="settings-stepper">
+                  <button onclick="adjustTransliterationSize(-1)" class="settings-control" aria-label="Decrease transliteration text size"><span class="material-symbols-outlined" aria-hidden="true">remove</span></button>
+                  <output id="transliterationSizeLabel" aria-label="Current transliteration text size">100%</output>
+                  <button onclick="adjustTransliterationSize(1)" class="settings-control" aria-label="Increase transliteration text size"><span class="material-symbols-outlined" aria-hidden="true">add</span></button>
+                </span>
+              </div>
+              <button id="tajweedToggle" onclick="toggleTajweed()" class="dropdown-item settings-toggle" aria-pressed="false">
+                <span class="material-symbols-outlined" aria-hidden="true">spellcheck</span>Color-coded tajweed
+              </button>
+              <div class="tajweed-legend" aria-label="Tajweed color legend">
+                <span><i class="tj-dot tj-madd"></i>Madd</span>
+                <span><i class="tj-dot tj-ghunnah"></i>Ghunnah</span>
+                <span><i class="tj-dot tj-idgham"></i>Idgham</span>
+                <span><i class="tj-dot tj-ikhafa"></i>Ikhafa</span>
+                <span><i class="tj-dot tj-qalqalah"></i>Qalqalah</span>
+                <span><i class="tj-dot tj-iqlab"></i>Iqlab</span>
+                <span><i class="tj-dot tj-silent"></i>Silent</span>
+              </div>
+            </section>
+
+            <section class="settings-section">
+              <div class="settings-section-title">Recitation</div>
+              <details class="settings-choice">
+                <summary><span>Reciter</span><span id="settingsReciterValue">Mishary Alafasy</span></summary>
+                <div class="settings-options">
+                  <button class="dropdown-item active" data-reciter-opt="alafasy" onclick="setReciter('alafasy');this.closest('details').removeAttribute('open')">Mishary Alafasy</button>
+                  <button class="dropdown-item" data-reciter-opt="basit-murattal" onclick="setReciter('basit-murattal');this.closest('details').removeAttribute('open')">Abdul Basit — Murattal</button>
+                  <button class="dropdown-item" data-reciter-opt="basit-mujawwad" onclick="setReciter('basit-mujawwad');this.closest('details').removeAttribute('open')">Abdul Basit — Mujawwad</button>
+                  <button class="dropdown-item" data-reciter-opt="sudais" onclick="setReciter('sudais');this.closest('details').removeAttribute('open')">As-Sudais</button>
+                  <button class="dropdown-item" data-reciter-opt="muaiqly" onclick="setReciter('muaiqly');this.closest('details').removeAttribute('open')">Maher Al-Muaiqly</button>
+                  <button class="dropdown-item" data-reciter-opt="shuraym" onclick="setReciter('shuraym');this.closest('details').removeAttribute('open')">Saood ash-Shuraym</button>
+                </div>
+              </details>
+              <div id="readingStatus" class="settings-status">Arabic only</div>
+            </section>
           </div>
         </div>
       </div>
@@ -211,14 +226,6 @@
 
   <!-- Mobile Bottom Toolbar -->
   <div id="mobileToolbar" class="visible">
-    <button onclick="adjustFontSize(-1)" title="Smaller font" aria-label="Smaller font">
-      <span class="material-symbols-outlined" aria-hidden="true">remove</span>
-      <span>Aa-</span>
-    </button>
-    <button onclick="adjustFontSize(1)" title="Larger font" aria-label="Larger font">
-      <span class="material-symbols-outlined" aria-hidden="true">add</span>
-      <span>Aa+</span>
-    </button>
     <button onclick="toggleRibbon()" title="Ribbon" aria-label="Toggle reading ribbon">
       <span class="material-symbols-outlined" aria-hidden="true">push_pin</span>
       <span>Ribbon</span>
@@ -238,10 +245,6 @@
     <button onclick="toggleFullscreen()" title="Fullscreen" aria-label="Toggle fullscreen">
       <span class="material-symbols-outlined" aria-hidden="true">fullscreen</span>
       <span>Full</span>
-    </button>
-    <button onclick="openSidebar()" title="Navigate" aria-label="Open navigation">
-      <span class="material-symbols-outlined" aria-hidden="true">menu</span>
-      <span>Go</span>
     </button>
   </div>
 

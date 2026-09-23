@@ -4,24 +4,53 @@ function arabicNum(n) {
   return String(n).split('').map(d => ARABIC_DIGITS[+d]).join('');
 }
 
-let fontScale = 100;
-const FONT_SCALE_MIN = 60, FONT_SCALE_MAX = 200, FONT_SCALE_STEP = 10;
+const TEXT_SCALE_MIN = 60, TEXT_SCALE_MAX = 200, TEXT_SCALE_STEP = 10;
+const TEXT_SCALE_STORAGE = {
+  font: 'quran-fontscale',
+  translation: 'quran-translation-scale',
+  transliteration: 'quran-transliteration-scale'
+};
+const textScales = { font: 100, translation: 100, transliteration: 100 };
 
-function adjustFontSize(dir) {
-  fontScale = Math.max(FONT_SCALE_MIN, Math.min(FONT_SCALE_MAX, fontScale + dir * FONT_SCALE_STEP));
-  applyFontScale();
-  localStorage.setItem('quran-fontscale', fontScale);
+function clampTextScale(value) {
+  return Math.max(TEXT_SCALE_MIN, Math.min(TEXT_SCALE_MAX, value));
 }
+
+function readTextScale(key) {
+  const value = parseInt(localStorage.getItem(key), 10);
+  return Number.isFinite(value) ? clampTextScale(value) : 100;
+}
+
+function adjustTextScale(type, dir) {
+  textScales[type] = clampTextScale(textScales[type] + dir * TEXT_SCALE_STEP);
+  localStorage.setItem(TEXT_SCALE_STORAGE[type], textScales[type]);
+  applyFontScale();
+}
+
+function adjustFontSize(dir) { adjustTextScale('font', dir); }
+function adjustTranslationSize(dir) { adjustTextScale('translation', dir); }
+function adjustTransliterationSize(dir) { adjustTextScale('transliteration', dir); }
 
 function applyFontScale() {
   const base = 2, baseMobile = 1.35, bismillahBase = 1.8, bismillahMobile = 1.3;
   const isMobile = window.innerWidth <= 640;
-  const qSize = (isMobile ? baseMobile : base) * fontScale / 100;
-  const bSize = (isMobile ? bismillahMobile : bismillahBase) * fontScale / 100;
+  const qSize = (isMobile ? baseMobile : base) * textScales.font / 100;
+  const bSize = (isMobile ? bismillahMobile : bismillahBase) * textScales.font / 100;
+  const translationSize = textScales.translation / 100;
+  const transliterationSize = textScales.transliteration / 100;
   document.querySelectorAll('.quran-text').forEach(el => el.style.fontSize = qSize + 'rem');
   document.querySelectorAll('.bismillah').forEach(el => el.style.fontSize = bSize + 'rem');
-  const label = document.getElementById('fontSizeLabel');
-  if (label) label.textContent = fontScale;
+  document.documentElement.style.setProperty('--translation-scale', translationSize);
+  document.documentElement.style.setProperty('--transliteration-scale', transliterationSize);
+  const labels = {
+    fontSizeLabel: textScales.font,
+    translationSizeLabel: textScales.translation,
+    transliterationSizeLabel: textScales.transliteration
+  };
+  Object.entries(labels).forEach(([id, value]) => {
+    const label = document.getElementById(id);
+    if (label) label.textContent = value + '%';
+  });
 }
 
 /* Shared helper: find verse element nearest to viewport center (DRY) */
@@ -139,14 +168,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // Explicit jumps (deep links #/s/v, resume, Juz/Surah nav) still scroll themselves.
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
+  const settingsPanel = document.getElementById('settingsDropdown');
+  if (settingsPanel) {
+    settingsPanel.classList.remove('absolute', 'right-0', 'top-full', 'mt-2', 'z-50');
+    document.querySelector('header')?.after(settingsPanel);
+  }
+  document.querySelectorAll('.settings-choice').forEach(choice => {
+    choice.addEventListener('toggle', () => {
+      if (!choice.open) return;
+      document.querySelectorAll('.settings-choice[open]').forEach(other => {
+        if (other !== choice) other.removeAttribute('open');
+      });
+    });
+  });
   const savedTheme = localStorage.getItem('quran-theme') || 'dark';
   setTheme(savedTheme, false);
 
   const savedFont = localStorage.getItem('quran-font') || 'amiri';
   setFont(savedFont, false);
 
-  fontScale = parseInt(localStorage.getItem('quran-fontscale'), 10) || 100;
-  fontScale = Math.max(FONT_SCALE_MIN, Math.min(FONT_SCALE_MAX, fontScale));
+  textScales.font = readTextScale(TEXT_SCALE_STORAGE.font);
+  textScales.translation = readTextScale(TEXT_SCALE_STORAGE.translation);
+  textScales.transliteration = readTextScale(TEXT_SCALE_STORAGE.transliteration);
   applyFontScale();
 
   refreshBookmarkCache();
@@ -184,6 +227,12 @@ const THEMES = ['dark', 'light', 'sepia', 'oled', 'emerald', 'midnight', 'contra
 const FONTS = ['uthman', 'scheherazade', 'amiri', 'amiri-classic', 'indopak', 'lpmq'];
 const THEME_BG = { dark: '#1c1917', light: '#fafaf9', sepia: '#f5edd6', oled: '#000000', emerald: '#0c1f18', midnight: '#0b1526', contrast: '#000000', parchment: '#f6efdd' };
 
+function updateSettingsChoice(attribute, id, value) {
+  const option = document.querySelector(`[${attribute}="${value}"]`);
+  const label = document.getElementById(id);
+  if (option && label) label.textContent = option.textContent;
+}
+
 function setTheme(theme, save = true) {
   if (!THEMES.includes(theme)) theme = 'dark';
   document.documentElement.setAttribute('data-theme', theme);
@@ -192,6 +241,7 @@ function setTheme(theme, save = true) {
   document.querySelectorAll('[data-theme-opt]').forEach(el => {
     el.classList.toggle('active', el.getAttribute('data-theme-opt') === theme);
   });
+  updateSettingsChoice('data-theme-opt', 'settingsThemeValue', theme);
 }
 
 function setFont(font, save = true) {
@@ -201,6 +251,7 @@ function setFont(font, save = true) {
   document.querySelectorAll('[data-font-opt]').forEach(el => {
     el.classList.toggle('active', el.getAttribute('data-font-opt') === font);
   });
+  updateSettingsChoice('data-font-opt', 'settingsFontValue', font);
 }
 
 /* ========== READING (translation / transliteration) ========== */
@@ -210,13 +261,21 @@ function initReadingUI() {
   });
   const offEl = document.querySelector('[data-translation-opt="off"]');
   if (offEl) offEl.classList.toggle('active', !showTranslation);
+  updateSettingsChoice('data-translation-opt', 'settingsTranslationValue', showTranslation ? translationEdition : 'off');
   const trToggle = document.getElementById('translitToggle');
-  if (trToggle) trToggle.classList.toggle('active', showTransliteration);
+  if (trToggle) {
+    trToggle.classList.toggle('active', showTransliteration);
+    trToggle.setAttribute('aria-pressed', showTransliteration ? 'true' : 'false');
+  }
   const tjToggle = document.getElementById('tajweedToggle');
-  if (tjToggle) tjToggle.classList.toggle('active', showTajweed);
+  if (tjToggle) {
+    tjToggle.classList.toggle('active', showTajweed);
+    tjToggle.setAttribute('aria-pressed', showTajweed ? 'true' : 'false');
+  }
   document.querySelectorAll('[data-reciter-opt]').forEach(el => {
     el.classList.toggle('active', el.getAttribute('data-reciter-opt') === audioReciter);
   });
+  updateSettingsChoice('data-reciter-opt', 'settingsReciterValue', audioReciter);
   updateReadingLoadingUI();
 }
 
@@ -278,27 +337,32 @@ function setTranslationEdition(id) {
   showToast('Translation: ' + (ed ? ed.short : id));
 }
 
+function closeDropdowns(returnFocus = false) {
+  const controls = [...document.querySelectorAll('[aria-controls]')];
+  const openButton = controls.find(button => button.getAttribute('aria-expanded') === 'true');
+  document.querySelectorAll('.dropdown-panel').forEach(d => d.classList.add('hidden'));
+  controls.forEach(button => button.setAttribute('aria-expanded', 'false'));
+  if (returnFocus && openButton) openButton.focus();
+}
+
 function toggleDropdown(id) {
   const dd = document.getElementById(id);
+  if (!dd) return;
   const isHidden = dd.classList.contains('hidden');
-  document.querySelectorAll('.dropdown-panel').forEach(d => d.classList.add('hidden'));
-  document.querySelectorAll('[aria-controls]').forEach(b => { if (b.getAttribute('aria-controls') !== id) b.setAttribute('aria-expanded', 'false'); });
+  closeDropdowns();
   if (isHidden) {
     dd.classList.remove('hidden');
     const btn = document.querySelector(`[aria-controls="${id}"]`);
     if (btn) btn.setAttribute('aria-expanded', 'true');
     const first = dd.querySelector('.dropdown-item');
     if (first && window.innerWidth > 640) first.setAttribute('tabindex', '0');
-  } else {
-    const btn = document.querySelector(`[aria-controls="${id}"]`);
-    if (btn) btn.setAttribute('aria-expanded', 'false');
   }
 }
 
 document.addEventListener('keydown', e => {
   const openDd = [...document.querySelectorAll('.dropdown-panel')].find(d => !d.classList.contains('hidden') && d.id !== 'reciterMenu');
   if (openDd && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-    const items = [...openDd.querySelectorAll('.dropdown-item')];
+    const items = [...openDd.querySelectorAll('.dropdown-item')].filter(item => item.offsetParent !== null);
     if (items.length) {
       e.preventDefault();
       const i = items.indexOf(document.activeElement);
@@ -309,9 +373,8 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('click', e => {
-  if (!e.target.closest('.relative')) {
-    document.querySelectorAll('.dropdown-panel').forEach(d => d.classList.add('hidden'));
-  }
+  const target = e.target;
+  if (!target.closest('.relative') && !target.closest('.settings-panel') && !target.closest('[aria-controls="settingsDropdown"]')) closeDropdowns();
 });
 
 /* ========== DATA ========== */
@@ -1025,6 +1088,7 @@ function toggleReciterMenu(e) {
   if (!menu) return;
   const willOpen = menu.classList.contains('hidden');
   document.querySelectorAll('.dropdown-panel').forEach(d => { if (d !== menu) d.classList.add('hidden'); });
+  document.querySelectorAll('[aria-controls]').forEach(button => button.setAttribute('aria-expanded', 'false'));
   const ayaMenu = document.getElementById('ayaMenu');
   if (ayaMenu) ayaMenu.remove();
   if (willOpen) {
@@ -1408,15 +1472,17 @@ document.addEventListener('keydown', e => {
     return;
   }
 
-  if (isInput) return;
-
   if (e.key === 'Escape') {
+    const openDropdown = [...document.querySelectorAll('.dropdown-panel')].find(d => !d.classList.contains('hidden') && d.id !== 'reciterMenu');
+    if (openDropdown) { closeDropdowns(true); return; }
     const menu = document.getElementById('ayaMenu');
     if (menu) { menu.remove(); return; }
     const reciterMenu = document.getElementById('reciterMenu');
     if (reciterMenu && !reciterMenu.classList.contains('hidden')) { closeReciterMenu(); return; }
     if (sidebarOpen) { closeSidebar(); return; }
   }
+
+  if (isInput) return;
 
   if (e.key === '/') { e.preventDefault(); openSidebar(); switchTab('search'); return; }
   if (e.key === 'h' || e.key === 'H') { scrollToTop(); return; }
