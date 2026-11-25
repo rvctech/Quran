@@ -1,4 +1,6 @@
-const CACHE_NAME = 'quran-v13';
+const CACHE_NAME = 'quran-v15';
+// App-owned data cache: shared with js/app.js for offline Quran text/editions.
+const DATA_CACHE_NAME = 'quran-data-v1';
 // Relative URLs so the app works on root and sub-paths (e.g. GitHub Pages)
 const STATIC_ASSETS = [
   './',
@@ -12,8 +14,6 @@ const STATIC_ASSETS = [
   './icons/icon-512.png',
   './manifest.json'
 ];
-const QURAN_API_PATTERN = 'quran-api';
-
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async cache => {
@@ -35,7 +35,11 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      Promise.all(keys
+        // Only retire old app shells. App-managed caches (quran-data-*,
+        // quran-audio-*) hold offline text and downloaded recitations.
+        .filter(k => /^quran-v\d+$/.test(k) && k !== CACHE_NAME)
+        .map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
@@ -51,24 +55,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Quran JSON: cache-first with network update (works offline after first load)
-  if (url.href.includes(QURAN_API_PATTERN)) {
+  // Quran JSON: network-first so updates are picked up, with offline fallback
+  // from the app-owned data cache (app.js also caches on the very first load,
+  // before this SW controls the page).
+  if (url.href.includes('quran-api@') || url.hostname === 'api.quran.com') {
     event.respondWith(
-      caches.open(CACHE_NAME).then(async cache => {
-        const cached = await cache.match(request);
-        const network = fetch(request)
-          .then(response => {
-            if (response && response.ok) cache.put(request, response.clone());
-            return response;
-          })
-          .catch(() => cached);
-        return cached || network;
+      caches.open(DATA_CACHE_NAME).then(async cache => {
+        try {
+          const response = await fetch(request);
+          if (response && response.ok) await cache.put(request, response.clone());
+          return response;
+        } catch (err) {
+          const cached = await cache.match(request);
+          if (cached) return cached;
+          throw err;
+        }
       })
     );
     return;
   }
 
-  if (url.hostname.includes('cdn.jsdelivr.net') || url.hostname.includes('api.quran.com') || url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com') || url.hostname.includes('raw.githubusercontent.com') || url.hostname.includes('db.onlinewebfonts.com') || url.hostname.includes('everyayah.com') || url.hostname.includes('cdn.islamic.network')) {
+  // Audio and fonts: audio is cached explicitly by the app in its own cache;
+  // here we only handle fonts and icons.
+  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com') || url.hostname.includes('db.onlinewebfonts.com') || url.hostname.includes('cdn.islamic.network')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(cache =>
         cache.match(request).then(cached => {
@@ -83,23 +92,21 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Network-first: updated HTML/JS is never stuck behind an old SW cache.
+  // Offline falls back to any cached copy (shell, audio, etc.).
   event.respondWith(
-    caches.match(request).then(cached => {
-      if (cached) return cached;
-      return fetch(request)
-        .then(response => {
-          // Cache same-origin GETs for offline shell
-          if (response && response.ok && url.origin === self.location.origin) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => {
-          // Offline fallback to cached shell for navigations
-          if (request.mode === 'navigate') return caches.match('./index.html');
-          return cached;
-        });
-    })
+    fetch(request)
+      .then(response => {
+        if (response && response.ok && url.origin === self.location.origin) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(request).then(cached =>
+          cached || (request.mode === 'navigate' ? caches.match('./index.html') : Response.error())
+        )
+      )
   );
 });

@@ -5,7 +5,7 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 ## Features
 
 - **Multiple Fonts** — QPC Uthmani Hafs, Scheherazade New, Amiri Quran, Amiri, IndoPak/Nastaleeq, LPMQ Isep Misbah
-- **3 Color Themes** — Dark, Light, Sepia
+- **8 Color Themes** — Dark, Light, Sepia, OLED, Emerald, Midnight, High Contrast, Parchment
 - **Surah & Juz Navigation** — sidebar with surah search, exact Juz start positions, and swipe support
 - **Offline Support (PWA)** — installable, works offline after first load via service worker
 - **Material Symbols Icons** — consistent icon set across header, toolbars, and sidebar
@@ -22,7 +22,7 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 - **Audio Recitation** — 6 reciters (Alafasy, Abdul Basit Murattal/Mujawwad, Sudais, Muaiqly, Shuraym), switchable from the player bar, with continuous playback and verse highlighting (`P`); download any surah for fully offline listening with highlighting
 - **Verse Search** — sidebar search across all Arabic text (diacritic-insensitive) plus loaded translation/transliteration
 - **Khatma Tracker** — mark each of the 30 Juz complete, progress bar, daily reading streak
-- **Last Read Persistence** — resumes where you left off
+- **Last Read Persistence** — resume pill follows the ribbon, or the last scrolled verse
 - **Fullscreen Mode**
 - **Responsive Design** — optimized for desktop and mobile
 
@@ -37,6 +37,9 @@ A lightweight, responsive web-based Quran reader built with vanilla HTML, CSS, a
 | `R` | Toggle reading ribbon |
 | `F` | Toggle fullscreen |
 | `P` | Play / pause audio recitation |
+| `T` | Toggle color-coded tajweed |
+| `H` | Back to top |
+| `/` | Open verse search |
 | `Esc` | Close menus and sidebar |
 
 ## Getting Started
@@ -67,4 +70,4 @@ npx serve .
 
 ## Credits
 
-Quran text, translations, and transliteration are fetched from a public Quran API at runtime. Audio recitation (Mishary Rashid Alafasy) streamed from EveryAyah. Arabic fonts sourced from their respective authors.
+Quran text, translations, and transliteration are fetched from a public Quran API at runtime. Audio recitation from six reciters streamed from EveryAyah. Arabic fonts sourced from their respective authors.

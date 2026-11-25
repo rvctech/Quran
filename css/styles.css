@@ -1033,6 +1033,19 @@ input { font: inherit; }
   opacity: 0.6;
   font-style: italic;
 }
+.extras-error {
+  display: inline-block;
+  margin: 0;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #d97706);
+  font: inherit;
+  font-style: italic;
+  cursor: pointer;
+  text-align: left;
+}
+.extras-error:focus-visible { outline: 2px solid var(--accent, #d97706); outline-offset: 2px; }
 @media (max-width: 640px) {
   .verse-block { padding: 0.85rem 0.9rem; overflow-wrap: break-word; }
   .verse-translit, .verse-translation { line-height: 1.65; }

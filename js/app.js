@@ -4,6 +4,17 @@ function arabicNum(n) {
   return String(n).split('').map(d => ARABIC_DIGITS[+d]).join('');
 }
 
+/* Local calendar day (UTC would flip the reading streak at the wrong time). */
+function localDayKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// App-owned caches: the service worker only manages the HTML/CSS/JS shell.
+const DATA_CACHE_NAME = 'quran-data-v1';
+
 const TEXT_SCALE_MIN = 60, TEXT_SCALE_MAX = 200, TEXT_SCALE_STEP = 10;
 const TEXT_SCALE_STORAGE = {
   font: 'quran-fontscale',
@@ -38,7 +49,10 @@ function applyFontScale() {
   const bSize = (isMobile ? bismillahMobile : bismillahBase) * textScales.font / 100;
   const translationSize = textScales.translation / 100;
   const transliterationSize = textScales.transliteration / 100;
-  document.querySelectorAll('.quran-text').forEach(el => el.style.fontSize = qSize + 'rem');
+  document.querySelectorAll('.quran-text').forEach(el => {
+    el.style.fontSize = qSize + 'rem';
+    el.dataset.baseFont = qSize + 'rem';
+  });
   document.querySelectorAll('.bismillah').forEach(el => el.style.fontSize = bSize + 'rem');
   document.documentElement.style.setProperty('--translation-scale', translationSize);
   document.documentElement.style.setProperty('--transliteration-scale', transliterationSize);
@@ -53,11 +67,17 @@ function applyFontScale() {
   });
 }
 
+/* Rebuild the cached verse list after any re-render of surah cards */
+function rebuildVerseCache() {
+  verseElCache = Array.from(document.querySelectorAll('.verse-wrap'));
+}
+
 /* Shared helper: find verse element nearest to viewport center (DRY) */
 function getCenterVerse() {
   const midY = window.innerHeight / 2;
   let best = null, bestDist = Infinity;
-  document.querySelectorAll('.verse-wrap').forEach(el => {
+  const verses = verseElCache.length ? verseElCache : document.querySelectorAll('.verse-wrap');
+  verses.forEach(el => {
     const r = el.getBoundingClientRect();
     if (r.height === 0) return;
     const dist = Math.abs((r.top + r.height / 2) - midY);
@@ -67,12 +87,12 @@ function getCenterVerse() {
 }
 
 let lastCurrentReference = '';
-function updateCurrentReference() {
+function updateCurrentReference(best = null) {
   const indicator = document.getElementById('currentReference');
   if (!indicator) return;
-  const best = getCenterVerse();
-  const surah = best?.dataset.s;
-  const ayah = best?.dataset.v;
+  const verse = best || getCenterVerse();
+  const surah = verse?.dataset.s;
+  const ayah = verse?.dataset.v;
   const meta = surah ? getSurahMeta(Number(surah)) : null;
   const reference = meta ? `${meta.en} ${surah}:${ayah}` : 'Quran';
   if (reference === lastCurrentReference) return;
@@ -80,6 +100,26 @@ function updateCurrentReference() {
   indicator.textContent = reference;
   indicator.title = reference;
   indicator.setAttribute('aria-label', `Current reading position: ${reference}`);
+}
+
+// Progress by verse position, not scrollHeight: lazy-loaded surahs grow the
+// page as you read, which would otherwise make the bar jump backwards.
+const TOTAL_QURAN_VERSES = SURAHS.reduce((n, s) => n + s.verses, 0);
+const VERSES_BEFORE = (() => {
+  const map = [];
+  let sum = 0;
+  SURAHS.forEach(s => { map[s.n] = sum; sum += s.verses; });
+  return map;
+})();
+
+function setReadingProgress(best = null) {
+  const bar = document.getElementById('readingProgress');
+  if (!bar) return;
+  const verse = best || getCenterVerse();
+  if (!verse) { bar.style.width = '0%'; return; }
+  const s = Number(verse.dataset.s), v = Number(verse.dataset.v);
+  const pct = ((VERSES_BEFORE[s] || 0) + v) / TOTAL_QURAN_VERSES * 100;
+  bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
 }
 
 /* Clipboard with fallback for non-secure contexts / denied permissions */
@@ -115,8 +155,6 @@ let quranData = {};
 let ribbonSurah = null, ribbonAyah = null;
 let loadedSurahs = new Set();
 let sidebarOpen = false;
-let searchMode = false;
-let currentTab = 'surah';
 /* Cached bookmark lookup to avoid JSON.parse per verse during render */
 let bookmarkSet = new Set();
 let audioSpeed = 1;
@@ -125,6 +163,8 @@ let sleepTimerId = null, sleepMinutes = 0;
 let lastFocusedBeforeSidebar = null;
 let deferredInstallPrompt = null;
 let hashSyncEnabled = true;
+// Cached verse elements so scroll-time lookups don't query the whole DOM.
+let verseElCache = [];
 
 /* ========== TRANSLATION / TRANSLITERATION ========== */
 let translationData = {};   // { surah: [{verse, text}] } for active edition
@@ -137,6 +177,9 @@ let showTransliteration = false;
 let translationLoading = false;
 let translitLoading = false;
 let translationLoadedEdition = null;
+// Request tokens discard stale responses when the user switches editions quickly.
+let translationRequestId = 0, translitRequestId = 0;
+let translationError = false, translitError = false;
 
 function extrasEnabled() {
   return showTranslation || showTransliteration;
@@ -219,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if ([0.75, 1, 1.25, 1.5, 2].includes(savedSpeed)) audioSpeed = savedSpeed;
   audioRepeat = localStorage.getItem('quran-audio-repeat') || 'off';
   if (!['off', 'one', 'surah'].includes(audioRepeat)) audioRepeat = 'off';
-  try { localStorage.removeItem('quran-memorize'); } catch (_) {} // retired feature
   initReadingUI();
   updateReciterBadge();
   updateAudioSpeedUI();
@@ -298,7 +340,9 @@ function initReadingUI() {
 function updateReadingLoadingUI() {
   const label = document.getElementById('readingStatus');
   if (!label) return;
-  if (translationLoading || translitLoading || tajweedInflight.size) {
+  if (translationError || translitError) {
+    label.textContent = 'Some text unavailable — tap Retry under a verse';
+  } else if (translationLoading || translitLoading || tajweedInflight.size) {
     label.textContent = 'Loading…';
   } else if (showTranslation || showTransliteration || showTajweed) {
     const parts = [];
@@ -318,6 +362,7 @@ function updateReadingLoadingUI() {
 function toggleTransliteration() {
   showTransliteration = !showTransliteration;
   localStorage.setItem('quran-show-translit', showTransliteration ? '1' : '0');
+  if (showTransliteration) translitError = false;
   initReadingUI();
   if (showTransliteration && !Object.keys(translitData).length) {
     ensureTransliteration();
@@ -339,11 +384,13 @@ function setTranslationEdition(id) {
   const changed = id !== translationEdition || !showTranslation;
   translationEdition = id;
   showTranslation = true;
+  translationError = false;
   localStorage.setItem('quran-translation-edition', id);
   localStorage.setItem('quran-show-translation', '1');
   initReadingUI();
   if (changed) {
     translationData = {};
+    translationMap = new Map();
     translationLoadedEdition = null;
     ensureTranslation(id);
   } else {
@@ -402,6 +449,7 @@ async function loadQuran() {
       const res = await fetch(API_URL);
       if (!res.ok) throw new Error('HTTP ' + res.status);
       data = await res.json();
+      await cacheJson(API_URL, data);
     } catch (fetchErr) {
       // Offline fallback: try Cache Storage (populated by service worker)
       if ('caches' in window) {
@@ -429,17 +477,35 @@ async function loadQuran() {
       document.getElementById('surahContainer').classList.remove('hidden');
       resetVirtualList();
       applyFontScale();
-      restoreLastRead();
+      refreshBookmarkCache();
       loadBookmarks(); // upgrade saved list with full verse text
+      applyRibbonVisual(false); // mark a saved ribbon if its verse is already rendered
+      updateBookmarkBtn();
+      restoreLastRead();
       // Load extras in background if the user had them enabled
       if (showTransliteration) ensureTransliteration();
       if (showTranslation) ensureTranslation(translationEdition);
       if (showTajweed) ensureTajweedForLoaded();
     }, 300);
   } catch (err) {
-    document.getElementById('loadingText').innerHTML = 'Failed to load Quran. Check connection. <button onclick="retryLoad()" class="offline-retry" style="margin-left:8px">Retry</button>';
+    const msg = navigator.onLine
+      ? 'Failed to load Quran. Check connection.'
+      : 'Quran text is not cached yet — connect once to save it for offline.';
+    document.getElementById('loadingText').innerHTML = `${msg} <button onclick="retryLoad()" class="offline-retry" style="margin-left:8px">Retry</button>`;
     console.error(err);
   }
+}
+
+/* Cache API JSON ourselves: the SW may not control the page yet on first load,
+   so relying on SW interception alone leaves nothing for offline use. */
+async function cacheJson(url, data) {
+  if (!('caches' in window)) return;
+  try {
+    const cache = await caches.open(DATA_CACHE_NAME);
+    await cache.put(url, new Response(JSON.stringify(data), {
+      headers: { 'Content-Type': 'application/json' }
+    }));
+  } catch (_) { /* storage unavailable or full — online mode still works */ }
 }
 
 /* Fetch an edition JSON with Cache Storage offline fallback */
@@ -447,7 +513,9 @@ async function fetchEdition(url) {
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
+    const data = await res.json();
+    await cacheJson(url, data);
+    return data;
   } catch (fetchErr) {
     if ('caches' in window) {
       try {
@@ -472,48 +540,67 @@ function indexEditionBySurah(data) {
 }
 
 async function ensureTransliteration() {
-  if (!showTransliteration || translitLoading || Object.keys(translitData).length) return;
+  if (!showTransliteration || Object.keys(translitData).length) return;
+  const requestId = ++translitRequestId;
   translitLoading = true;
+  translitError = false;
   updateReadingLoadingUI();
   try {
     const data = await fetchEdition(TRANSLITERATION_URL);
+    if (requestId !== translitRequestId || !showTransliteration) return;
     translitData = indexEditionBySurah(data);
     rebuildExtraMaps();
     refreshExtrasInPlace();
   } catch (e) {
+    if (requestId !== translitRequestId) return;
     console.error('transliteration load failed', e);
-    showToast('Could not load transliteration. Check connection.');
-    showTransliteration = false;
-    localStorage.setItem('quran-show-translit', '0');
-    initReadingUI();
+    translitError = true;
+    showToast('Transliteration unavailable — tap retry under a verse');
+    refreshExtrasInPlace();
   } finally {
-    translitLoading = false;
-    updateReadingLoadingUI();
+    if (requestId === translitRequestId) {
+      translitLoading = false;
+      updateReadingLoadingUI();
+    }
   }
 }
 
 async function ensureTranslation(edition = translationEdition) {
   if (!showTranslation) return;
-  if (translationLoading) return;
   if (translationLoadedEdition === edition && Object.keys(translationData).length) return;
+  const requestId = ++translationRequestId;
   translationLoading = true;
+  translationError = false;
   updateReadingLoadingUI();
   try {
     const data = await fetchEdition(editionUrl(edition));
+    if (requestId !== translationRequestId || !showTranslation) return;
     translationData = indexEditionBySurah(data);
     translationLoadedEdition = edition;
     rebuildExtraMaps();
     refreshExtrasInPlace();
   } catch (e) {
+    if (requestId !== translationRequestId) return;
     console.error('translation load failed', e);
-    showToast('Could not load translation. Check connection.');
-    showTranslation = false;
-    localStorage.setItem('quran-show-translation', '0');
-    initReadingUI();
+    translationError = true;
+    showToast('Translation unavailable — tap retry under a verse');
+    refreshExtrasInPlace();
   } finally {
-    translationLoading = false;
-    updateReadingLoadingUI();
+    if (requestId === translationRequestId) {
+      translationLoading = false;
+      updateReadingLoadingUI();
+    }
   }
+}
+
+/* Retry text that failed to load without turning the user's setting off. */
+function retryExtras() {
+  translationError = false;
+  translitError = false;
+  if (showTranslation) ensureTranslation(translationEdition);
+  if (showTransliteration) ensureTransliteration();
+  refreshExtrasInPlace();
+  showToast('Retrying…');
 }
 
 /* Re-render rendered cards in place (preserves virtual list + scroll) */
@@ -527,6 +614,7 @@ function refreshExtrasInPlace() {
     const fresh = tmp.firstElementChild;
     if (fresh) card.replaceWith(fresh);
   });
+  rebuildVerseCache();
   applyFontScale();
   updateReadingLoadingUI();
   loadBookmarks(); // include newly arrived translation text in saved list
@@ -539,6 +627,7 @@ function refreshSurahCard(n) {
   tmp.innerHTML = renderSurah(n);
   const fresh = tmp.firstElementChild;
   if (fresh) card.replaceWith(fresh);
+  rebuildVerseCache();
   applyFontScale();
 }
 
@@ -567,7 +656,11 @@ function sanitizeTajweed(html) {
   let s = String(html || '');
   s = s.replace(/<span class=end>.*?<\/span>/g, '');
   s = s.replace(/۞/g, '');
-  const esc = s2 => s2.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Preserve legitimate HTML entities from the API; only escape bare ampersands.
+  const esc = s2 => s2
+    .replace(/&(?!(?:#\d+|#x[\da-f]+|[a-z]+);)/gi, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
   const re = /<\/?tajweed(?:\s+class=([a-z_]+))?>/g;
   let last = 0, m, out = '';
   while ((m = re.exec(s))) {
@@ -753,11 +846,17 @@ function renderVerseBlocks(n, verses) {
     }
     html += `</div>`;
     if (showTransliteration) {
-      html += `<p class="verse-translit" dir="ltr">${translit ? escapeHtml(translit) : '<span class="extras-loading">Loading transliteration…</span>'}</p>`;
+      const translitPlaceholder = translitError
+        ? '<button type="button" class="extras-error" onclick="retryExtras()">Transliteration unavailable — tap to retry</button>'
+        : '<span class="extras-loading">Loading transliteration…</span>';
+      html += `<p class="verse-translit" dir="ltr">${translit ? escapeHtml(translit) : translitPlaceholder}</p>`;
     }
     if (showTranslation) {
       const editionShort = (TRANSLATION_EDITIONS.find(e => e.id === translationEdition) || {}).short || '';
-      html += `<p class="verse-translation" dir="ltr">${translation ? escapeHtml(translation) : '<span class="extras-loading">Loading translation…</span>'}${translation && editionShort ? ` <span class="verse-ref">— ${escapeHtml(editionShort)}</span>` : ''}</p>`;
+      const translationPlaceholder = translationError
+        ? '<button type="button" class="extras-error" onclick="retryExtras()">Translation unavailable — tap to retry</button>'
+        : '<span class="extras-loading">Loading translation…</span>';
+      html += `<p class="verse-translation" dir="ltr">${translation ? escapeHtml(translation) : translationPlaceholder}${translation && editionShort ? ` <span class="verse-ref">— ${escapeHtml(editionShort)}</span>` : ''}</p>`;
     }
     if (isSajdah(n, v.verse)) {
       html += `<p class="verse-translation" style="color:var(--accent);font-weight:700">۩ Sajdah — prostration is recommended here.</p>`;
@@ -793,6 +892,7 @@ function mountSurah(n) {
 // Ensure surahs 1..n are rendered (used by jump / deep links)
 function ensureSurahRendered(n) {
   for (let i = 1; i <= n; i++) mountSurah(i);
+  rebuildVerseCache();
   observeSentinel();
 }
 
@@ -803,6 +903,7 @@ function renderNextBatch() {
   if (next > 114) { finishVirtualList(); return; }
   const end = Math.min(114, next + SURAHS_NEXT_BATCH - 1);
   for (let i = next; i <= end; i++) mountSurah(i);
+  rebuildVerseCache();
   applyFontScale();
   if (end >= 114) finishVirtualList();
 }
@@ -818,7 +919,6 @@ function observeSentinel() {
   const sentinel = document.getElementById('listSentinel');
   if (!sentinel || listEndReached) return;
   if (!('IntersectionObserver' in window)) {
-    // Fallback: render everything (old behaviour)
     loadAllSurahs();
     return;
   }
@@ -833,29 +933,26 @@ function observeSentinel() {
 
 function resetVirtualList() {
   const container = document.getElementById('surahContainer');
-  // Remove old cards but keep sentinel
   container.querySelectorAll('.surah-card').forEach(el => el.remove());
   loadedSurahs.clear();
   listEndReached = false;
   const sentinel = document.getElementById('listSentinel');
   if (sentinel) {
     sentinel.classList.remove('hidden');
-    // Move sentinel to end (in case refresh reordered)
     container.appendChild(sentinel);
   }
   const end = Math.min(114, SURAHS_INITIAL_BATCH);
   for (let i = 1; i <= end; i++) mountSurah(i);
+  rebuildVerseCache();
   observeSentinel();
-  requestAnimationFrame(updateCurrentReference);
+  requestAnimationFrame(() => { updateCurrentReference(); setReadingProgress(); });
 }
 
-// Back-compat: old code called loadVisibleSurahs() to mean "make sure all is rendered".
-function loadVisibleSurahs() {
-  renderNextBatch();
-}
+function loadVisibleSurahs() { renderNextBatch(); }
 
 function loadAllSurahs() {
   for (let i = 1; i <= 114; i++) mountSurah(i);
+  rebuildVerseCache();
   finishVirtualList();
   applyFontScale();
 }
@@ -863,6 +960,7 @@ function loadAllSurahs() {
 /* ========== SCROLL ========== */
 let ticking = false;
 let scrollSaveTimer = null;
+let lastReferenceUpdate = 0;
 
 function setupScroll() {
   window.addEventListener('scroll', () => {
@@ -871,14 +969,27 @@ function setupScroll() {
       ticking = true;
     }
   });
+  // Arabic base sizes differ between the mobile and desktop breakpoints, so
+  // reapply them when the viewport changes (rotation, split screen, resize).
+  let resizeTimer = null;
+  const scheduleRescale = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(applyFontScale, 150);
+  };
+  window.addEventListener('resize', scheduleRescale, { passive: true });
+  window.addEventListener('orientationchange', scheduleRescale, { passive: true });
 }
 
 function handleScroll() {
   const scrollTop = window.scrollY;
-  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-  const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-  document.getElementById('readingProgress').style.width = pct + '%';
-  updateCurrentReference();
+  // The center lookup walks every rendered verse; cap it to ~7 updates/sec.
+  const now = Date.now();
+  if (now - lastReferenceUpdate >= 150) {
+    const best = getCenterVerse();
+    updateCurrentReference(best);
+    setReadingProgress(best);
+    lastReferenceUpdate = now;
+  }
   document.getElementById('goTopBtn').classList.toggle('hidden', scrollTop < 600);
   document.getElementById('floatingTop')?.classList.toggle('hidden', scrollTop < 600);
   clearTimeout(scrollSaveTimer);
@@ -905,9 +1016,9 @@ function clearRibbonVisual() {
   document.querySelectorAll('.ribbon-mark').forEach(el => el.remove());
 }
 
-function applyRibbonVisual() {
+function applyRibbonVisual(ensure = true) {
   if (ribbonSurah == null) return;
-  ensureSurahRendered(ribbonSurah);
+  if (ensure) ensureSurahRendered(ribbonSurah);
   const el = ribbonVerseEl();
   if (!el) return;
   el.classList.add('ribbon-verse');
@@ -923,7 +1034,9 @@ function applyRibbonVisual() {
 function clearRibbonStored(notify = true) {
   ribbonSurah = null; ribbonAyah = null;
   localStorage.removeItem('quran-ribbon');
-  document.getElementById('resumePill')?.classList.add('hidden');
+  const last = getLastRead();
+  if (last) showResumePill(last);
+  else document.getElementById('resumePill')?.classList.add('hidden');
   if (notify) showToast('Ribbon removed');
   updateRibbonUI();
   clearRibbonVisual();
@@ -1301,10 +1414,12 @@ function onAudioEnded() {
 /* ========== OFFLINE SURAH AUDIO DOWNLOAD ========== */
 let audioDl = { surah: null, total: 0, done: 0, running: false, abort: null };
 
+// Dedicated cache: the service worker owns 'quran-v*' and deletes old versions
+// on activation, which would otherwise wipe downloaded recitations.
+const AUDIO_CACHE_NAME = 'quran-audio-v1';
+
 async function appAudioCache() {
-  const keys = await caches.keys();
-  const hit = keys.find(k => k === 'quran-v13') || keys.find(k => k.startsWith('quran-')) || 'quran-v13';
-  return caches.open(hit);
+  return caches.open(AUDIO_CACHE_NAME);
 }
 
 async function isSurahAudioCached(s) {
@@ -1382,6 +1497,8 @@ async function downloadCurrentSurahAudio() {
 }
 
 function stopAudio() {
+  // A manual stop cancels any pending sleep timer so it can't fire later.
+  cycleSleepTimerReset();
   if (audioEl) audioEl.pause();
   if (audioEl) audioEl.removeAttribute('src');
   audioS = null; audioV = null;
@@ -1405,6 +1522,36 @@ function saveLastRead() {
   }
 }
 
+/* Return the saved scroll position, validated against surah metadata. */
+function getLastRead() {
+  try {
+    const saved = localStorage.getItem('quran-lastread');
+    if (!saved) return null;
+    const [s, v] = saved.split(':').map(Number);
+    const meta = getSurahMeta(s);
+    if (!Number.isInteger(s) || s < 1 || s > 114 || !meta) return null;
+    if (!Number.isInteger(v) || v < 1 || v > meta.verses) return null;
+    return { s, v };
+  } catch { return null; }
+}
+
+/* Ribbon wins when present; otherwise fall back to the last scroll position. */
+function getResumeTarget() {
+  if (ribbonSurah != null && ribbonAyah != null) return { s: ribbonSurah, v: ribbonAyah };
+  return getLastRead();
+}
+
+function showResumePill(target) {
+  const pill = document.getElementById('resumePill');
+  const txt = document.getElementById('resumeText');
+  if (!pill || !txt || !target) return;
+  const meta = getSurahMeta(target.s);
+  txt.textContent = `Resume ${meta ? meta.en : 'Surah ' + target.s} ${target.s}:${target.v}`;
+  pill.classList.remove('hidden');
+  clearTimeout(restoreLastRead._t);
+  restoreLastRead._t = setTimeout(() => pill.classList.add('hidden'), 12000);
+}
+
 function restoreLastRead() {
   if (pendingDeepLink) {
     const { s, v } = pendingDeepLink;
@@ -1416,24 +1563,21 @@ function restoreLastRead() {
     }, 450);
     return;
   }
-  if (pendingResumeHash) { pendingResumeHash = false; }
-  // Resume follows the ribbon only — offer it as a pill instead of yanking the user away
-  if (ribbonSurah == null) return;
-  const s = ribbonSurah, v = ribbonAyah;
-  const meta = typeof getSurahMeta === 'function' ? getSurahMeta(s) : null;
-  const pill = document.getElementById('resumePill');
-  const txt = document.getElementById('resumeText');
-  if (pill && txt) {
-    txt.textContent = `Resume ${meta ? meta.en : 'Surah ' + s} ${s}:${v}`;
-    pill.classList.remove('hidden');
-    clearTimeout(restoreLastRead._t);
-    restoreLastRead._t = setTimeout(() => pill.classList.add('hidden'), 12000);
+  const target = getResumeTarget();
+  if (!target) return;
+  // #resume (e.g. the PWA shortcut) jumps straight there instead of showing a pill.
+  if (pendingResumeHash) {
+    pendingResumeHash = false;
+    goToVerse(target.s, target.v);
+    return;
   }
+  showResumePill(target);
 }
 function resumeLastRead() {
   document.getElementById('resumePill')?.classList.add('hidden');
-  if (ribbonSurah == null) { showToast('No ribbon set — tap an ayah number to place one'); return; }
-  goToVerse(ribbonSurah, ribbonAyah);
+  const target = getResumeTarget();
+  if (!target) { showToast('No reading position yet — scroll to a verse to save one'); return; }
+  goToVerse(target.s, target.v);
 }
 function dismissResume() { document.getElementById('resumePill')?.classList.add('hidden'); }
 function retryLoad() {
@@ -1454,8 +1598,12 @@ function setupPWA() {
     showToast('App installed — works offline');
   });
   if ('serviceWorker' in navigator) {
+    // clients.claim() on first install also fires controllerchange — that is not
+    // an update, so only treat a change as an update once we had a controller.
+    let hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('./sw.js').catch(() => {});
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) { hadController = true; return; }
       if (setupPWA._reloaded) return;
       setupPWA._reloaded = true;
       document.getElementById('updateBanner')?.classList.remove('hidden');
@@ -1532,7 +1680,7 @@ function jumpSurah(dir) {
 
 function bookmarkNearestVerse() {
   const best = getCenterVerse();
-  if (!best) return;
+  if (!best) { showToast('Quran text still loading — connect once to cache it'); return; }
   toggleBookmark(parseInt(best.dataset.s, 10), parseInt(best.dataset.v, 10));
 }
 
@@ -1753,7 +1901,9 @@ function clearBookmarks() {
   localStorage.removeItem('quran-bookmarks');
   refreshBookmarkCache();
   document.querySelectorAll('.bookmark-dot').forEach(el => el.remove());
+  document.querySelectorAll('.verse-wrap.has-bookmark').forEach(el => el.classList.remove('has-bookmark'));
   loadBookmarks();
+  updateBookmarkBtn();
   showToast('All bookmarks cleared');
 }
 
@@ -1780,7 +1930,7 @@ function getActivityDays() {
 function recordActivity() {
   try {
     const days = getActivityDays();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDayKey(new Date());
     if (!days.includes(today)) {
       days.push(today);
       while (days.length > 400) days.shift();
@@ -1791,11 +1941,10 @@ function recordActivity() {
 
 function getStreak() {
   const set = new Set(getActivityDays());
-  const iso = d => d.toISOString().slice(0, 10);
   const d = new Date();
-  if (!set.has(iso(d))) d.setDate(d.getDate() - 1);
+  if (!set.has(localDayKey(d))) d.setDate(d.getDate() - 1);
   let streak = 0;
-  while (set.has(iso(d))) { streak++; d.setDate(d.getDate() - 1); }
+  while (set.has(localDayKey(d))) { streak++; d.setDate(d.getDate() - 1); }
   return streak;
 }
 
@@ -1919,15 +2068,13 @@ function setupDeepLinks() {
 let pendingDeepLink = null, pendingResumeHash = false;
 function goToSurah(n, pushHash = true) {
   closeSidebar();
-  searchMode = false;
-  currentTab = 'surah';
   document.getElementById('searchInput').value = '';
   filterSidebar();
   document.querySelectorAll('.nav-row.current').forEach(el => { el.classList.remove('current'); el.style.background = 'transparent'; });
   const row = document.querySelector(`[data-surah-row="${n}"]`);
   if (row) { row.classList.add('current'); row.style.background = ''; }
 
-  if (pushHash) writeHash(n, null);
+  if (pushHash) { writeHash(n, null); recordActivity(); }
   ensureSurahRendered(n);
   requestAnimationFrame(() => {
     document.getElementById(`surah-${n}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1960,7 +2107,7 @@ function flashVerse(el, color = null) {
 function goToVerse(s, v, pushHash = true) {
   closeSidebar();
   ensureSurahRendered(s);
-  if (pushHash) writeHash(s, v);
+  if (pushHash) { writeHash(s, v); recordActivity(); }
   requestAnimationFrame(() => {
     flashVerse(document.querySelector(`[data-s="${s}"][data-v="${v}"]`));
   });
@@ -2003,7 +2150,6 @@ function closeSidebar() {
 const TAB_PANELS = { surah: 'tabSurah', juz: 'tabJuz', bookmarks: 'tabBookmarks', search: 'tabSearch' };
 
 function switchTab(tab) {
-  currentTab = tab;
   document.querySelectorAll('[data-nav-tab]').forEach(el => {
     el.classList.toggle('active-tab', el.dataset.navTab === tab);
   });
@@ -2019,6 +2165,8 @@ function switchTab(tab) {
   }
   const surahSearch = document.getElementById('searchInput');
   if (surahSearch) {
+    // The filter is invisible on other tabs, so don't leave rows hidden by it.
+    if (surahSearch.value) { surahSearch.value = ''; filterSidebar(); }
     surahSearch.parentElement.classList.toggle('hidden', !(tab === 'surah' || tab === 'juz'));
   }
 }
@@ -2250,9 +2398,11 @@ function copyVerse(s, v) {
 }
 
 function handleSearch(e) {
+  // Both input and keyup fire per keystroke; only keyup handles Enter/Escape,
+  // while input does the filtering (so paste works too).
+  if (e.type === 'keyup' && e.key !== 'Enter' && e.key !== 'Escape') return;
   if (e.key === 'Escape') {
     e.target.value = '';
-    searchMode = false;
     filterSidebar();
     return;
   }
@@ -2280,26 +2430,6 @@ function handleSearch(e) {
 }
 
 /* ========== UI ========== */
-// Full re-render is now reserved for theme/font changes only.
-// Bookmark/ribbon toggles update in place (see updateVerseBookmarkUI / setRibbon).
-function refreshView() {
-  const best = getCenterVerse();
-  const centerKey = best ? `${best.dataset.s}:${best.dataset.v}` : null;
-  refreshBookmarkCache();
-  resetVirtualList();
-  applyFontScale();
-  applyRibbonVisual();
-  loadBookmarks();
-  if (centerKey) {
-    const [s, v] = centerKey.split(':').map(Number);
-    ensureSurahRendered(s);
-    requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-s="${s}"][data-v="${v}"]`);
-      if (el) el.scrollIntoView({ block: 'center' });
-    });
-  }
-}
-
 function showToast(msg) {
   const toast = document.getElementById('toast');
   const inner = toast.querySelector('.toast');
