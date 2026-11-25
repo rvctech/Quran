@@ -49,11 +49,10 @@ function applyFontScale() {
   const bSize = (isMobile ? bismillahMobile : bismillahBase) * textScales.font / 100;
   const translationSize = textScales.translation / 100;
   const transliterationSize = textScales.transliteration / 100;
-  document.querySelectorAll('.quran-text').forEach(el => {
-    el.style.fontSize = qSize + 'rem';
-    el.dataset.baseFont = qSize + 'rem';
-  });
-  document.querySelectorAll('.bismillah').forEach(el => el.style.fontSize = bSize + 'rem');
+  // One CSS-variable write updates every rendered verse instead of touching
+  // every element individually on each font change or batch mount.
+  document.documentElement.style.setProperty('--quran-font-size', qSize + 'rem');
+  document.documentElement.style.setProperty('--bismillah-font-size', bSize + 'rem');
   document.documentElement.style.setProperty('--translation-scale', translationSize);
   document.documentElement.style.setProperty('--transliteration-scale', transliterationSize);
   const labels = {
@@ -72,17 +71,31 @@ function rebuildVerseCache() {
   verseElCache = Array.from(document.querySelectorAll('.verse-wrap'));
 }
 
-/* Shared helper: find verse element nearest to viewport center (DRY) */
+/* Find the verse nearest the viewport center. The cached list is in document
+   order, so a binary search needs ~13 measurements instead of thousands. */
 function getCenterVerse() {
+  const verses = verseElCache.length ? verseElCache : Array.from(document.querySelectorAll('.verse-wrap'));
+  if (!verses.length) return null;
   const midY = window.innerHeight / 2;
-  let best = null, bestDist = Infinity;
-  const verses = verseElCache.length ? verseElCache : document.querySelectorAll('.verse-wrap');
-  verses.forEach(el => {
+  const centerOf = el => {
     const r = el.getBoundingClientRect();
-    if (r.height === 0) return;
-    const dist = Math.abs((r.top + r.height / 2) - midY);
-    if (dist < bestDist) { bestDist = dist; best = el; }
-  });
+    return r.height ? r.top + r.height / 2 : null;
+  };
+  let lo = 0, hi = verses.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    const c = centerOf(verses[mid]);
+    if (c !== null && c < midY) lo = mid + 1;
+    else hi = mid;
+  }
+  let best = null, bestDist = Infinity;
+  for (let i = lo - 1; i <= lo + 1 && i < verses.length; i++) {
+    if (i < 0) continue;
+    const c = centerOf(verses[i]);
+    if (c === null) continue;
+    const dist = Math.abs(c - midY);
+    if (dist < bestDist) { bestDist = dist; best = verses[i]; }
+  }
   return best;
 }
 
@@ -605,7 +618,12 @@ function retryExtras() {
 
 /* Re-render rendered cards in place (preserves virtual list + scroll) */
 function refreshExtrasInPlace() {
-  const cards = document.querySelectorAll('.surah-card');
+  // Only re-render cards near the viewport; distant cards render with the new
+  // extras when they are mounted again.
+  const cards = [...document.querySelectorAll('.surah-card')].filter(card => {
+    const r = card.getBoundingClientRect();
+    return r.bottom > -1200 && r.top < window.innerHeight + 1200;
+  });
   cards.forEach(card => {
     const n = parseInt(card.dataset.surah, 10);
     if (!n) return;
@@ -867,11 +885,13 @@ function renderVerseBlocks(n, verses) {
   return html;
 }
 
-/* ========== VIRTUALIZED LIST (progressive rendering) ========== */
-// Renders surahs in small batches as the user scrolls so initial load stays
-// fast (~500 verses) instead of mounting all ~6,236 verses at once.
+/* ========== WINDOWED SURAH LIST ========== */
+// Only a small window of surahs is mounted; distant ones become fixed-height
+// placeholders so the document keeps its height and scroll position.
 const SURAHS_INITIAL_BATCH = 3;
 const SURAHS_NEXT_BATCH = 4;
+const MOUNT_WINDOW = 2; // surahs kept on each side of the viewport center
+const surahHeights = new Map();
 let listObserver = null;
 let listEndReached = false;
 
@@ -883,15 +903,53 @@ function mountSurah(n) {
   wrapper.innerHTML = renderSurah(n);
   const card = wrapper.firstElementChild;
   if (!card) return;
-  if (sentinel) container.insertBefore(card, sentinel);
+  const placeholder = document.getElementById(`surah-placeholder-${n}`);
+  if (placeholder) {
+    placeholder.replaceWith(card);
+    surahHeights.delete(n);
+  } else if (sentinel) container.insertBefore(card, sentinel);
   else container.appendChild(card);
   loadedSurahs.add(n);
   if (showTajweed && !tajweedData[n]) ensureTajweedForSurah(n);
 }
 
-// Ensure surahs 1..n are rendered (used by jump / deep links)
+function unmountSurah(n) {
+  const card = document.getElementById(`surah-${n}`);
+  if (!card || !loadedSurahs.has(n)) return;
+  const height = card.offsetHeight;
+  const ph = document.createElement('div');
+  ph.id = `surah-placeholder-${n}`;
+  ph.className = 'surah-placeholder';
+  ph.setAttribute('aria-hidden', 'true');
+  ph.style.height = Math.max(200, height) + 'px';
+  card.replaceWith(ph);
+  surahHeights.set(n, height);
+  loadedSurahs.delete(n);
+}
+
+/* Keep only surahs near the viewport center mounted. */
+function trimMountedSurahs() {
+  const cards = [...document.querySelectorAll('.surah-card')];
+  if (cards.length <= SURAHS_INITIAL_BATCH + MOUNT_WINDOW) return;
+  const midY = window.innerHeight / 2;
+  let center = null, bestDist = Infinity;
+  cards.forEach(card => {
+    const r = card.getBoundingClientRect();
+    if (!r.height) return;
+    const dist = Math.abs(r.top + r.height / 2 - midY);
+    if (dist < bestDist) { bestDist = dist; center = parseInt(card.dataset.surah, 10); }
+  });
+  if (!center) return;
+  let changed = false;
+  loadedSurahs.forEach(n => {
+    if (Math.abs(n - center) > MOUNT_WINDOW) { unmountSurah(n); changed = true; }
+  });
+  if (changed) rebuildVerseCache();
+}
+
+// Ensure a jumped-to surah is mounted (no need to mount everything before it).
 function ensureSurahRendered(n) {
-  for (let i = 1; i <= n; i++) mountSurah(i);
+  mountSurah(n);
   rebuildVerseCache();
   observeSentinel();
 }
@@ -899,12 +957,13 @@ function ensureSurahRendered(n) {
 function renderNextBatch() {
   if (listEndReached) return;
   let next = 1;
-  while (next <= 114 && loadedSurahs.has(next)) next++;
+  loadedSurahs.forEach(n => { if (n >= next) next = n + 1; });
   if (next > 114) { finishVirtualList(); return; }
   const end = Math.min(114, next + SURAHS_NEXT_BATCH - 1);
   for (let i = next; i <= end; i++) mountSurah(i);
   rebuildVerseCache();
   applyFontScale();
+  trimMountedSurahs();
   if (end >= 114) finishVirtualList();
 }
 
@@ -918,10 +977,7 @@ function finishVirtualList() {
 function observeSentinel() {
   const sentinel = document.getElementById('listSentinel');
   if (!sentinel || listEndReached) return;
-  if (!('IntersectionObserver' in window)) {
-    loadAllSurahs();
-    return;
-  }
+  if (!('IntersectionObserver' in window)) return; // scroll handler does batching
   if (listObserver) listObserver.disconnect();
   listObserver = new IntersectionObserver(entries => {
     entries.forEach(entry => {
@@ -933,8 +989,9 @@ function observeSentinel() {
 
 function resetVirtualList() {
   const container = document.getElementById('surahContainer');
-  container.querySelectorAll('.surah-card').forEach(el => el.remove());
+  container.querySelectorAll('.surah-card, .surah-placeholder').forEach(el => el.remove());
   loadedSurahs.clear();
+  surahHeights.clear();
   listEndReached = false;
   const sentinel = document.getElementById('listSentinel');
   if (sentinel) {
@@ -950,12 +1007,7 @@ function resetVirtualList() {
 
 function loadVisibleSurahs() { renderNextBatch(); }
 
-function loadAllSurahs() {
-  for (let i = 1; i <= 114; i++) mountSurah(i);
-  rebuildVerseCache();
-  finishVirtualList();
-  applyFontScale();
-}
+function loadAllSurahs() { renderNextBatch(); }
 
 /* ========== SCROLL ========== */
 let ticking = false;
@@ -982,12 +1034,17 @@ function setupScroll() {
 
 function handleScroll() {
   const scrollTop = window.scrollY;
-  // The center lookup walks every rendered verse; cap it to ~7 updates/sec.
+  // Center lookup and window trimming are capped to ~7 updates/sec.
   const now = Date.now();
   if (now - lastReferenceUpdate >= 150) {
     const best = getCenterVerse();
     updateCurrentReference(best);
     setReadingProgress(best);
+    trimMountedSurahs();
+    if (!('IntersectionObserver' in window)) {
+      const sentinel = document.getElementById('listSentinel');
+      if (sentinel && !listEndReached && sentinel.getBoundingClientRect().top < window.innerHeight + 1200) renderNextBatch();
+    }
     lastReferenceUpdate = now;
   }
   document.getElementById('goTopBtn').classList.toggle('hidden', scrollTop < 600);

@@ -280,7 +280,7 @@ main {
 
 /* ===== QURAN TEXT ===== */
 .quran-text {
-  font-size: 2rem;
+  font-size: var(--quran-font-size, 2rem);
   line-height: 2.8;
   direction: rtl;
   text-align: justify;
@@ -300,7 +300,6 @@ main {
 @media (max-width: 640px) {
   /* Justify creates huge gaps on narrow screens — center instead */
   .quran-text {
-    font-size: 1.35rem;
     line-height: 2.3;
     word-spacing: 0;
     text-align: center;
@@ -311,14 +310,13 @@ main {
   [data-font="indopak"] .quran-text { line-height: 2.9; }
 }
 
-.bismillah { font-size: 1.8rem; direction: rtl; }
+.bismillah { font-size: var(--bismillah-font-size, 1.8rem); direction: rtl; }
 [data-font="uthman"] .bismillah { font-family: 'KFGQPC Uthmanic', 'Amiri Quran', 'Amiri', serif; }
 [data-font="scheherazade"] .bismillah { font-family: 'Scheherazade New', 'Amiri Quran', 'Amiri', serif; }
 [data-font="amiri"] .bismillah { font-family: 'Amiri Quran', 'Amiri', serif; }
 [data-font="amiri-classic"] .bismillah { font-family: 'Amiri', 'Amiri Quran', serif; }
 [data-font="indopak"] .bismillah { font-family: 'Noto Nastaliq Urdu', serif; }
 [data-font="lpmq"] .bismillah { font-family: 'LPMQ Isep Misbah', 'Amiri', serif; }
-@media (max-width: 640px) { .bismillah { font-size: 1.3rem; } }
 
 /* ===== RUB EL HIZB MARKERS (symbol only; details in title/aria-label) ===== */
 .rub-marker {
@@ -377,7 +375,9 @@ main {
 #readingProgress { position: fixed; top: 0; left: 0; height: 3px; z-index: 100; background: var(--accent); transition: width 0.1s linear; width: 0%; }
 
 /* ===== COMPONENTS ===== */
-.surah-card { transition: transform 0.15s; }
+/* Skip layout/paint for surahs far outside the viewport */
+.surah-card { transition: transform 0.15s; content-visibility: auto; contain-intrinsic-size: auto 800px; }
+.surah-placeholder { border-radius: 1.25rem; }
 .surah-card:hover { transform: translateY(-1px); }
 
 /* Ribbon marks one specific verse (not the chapter) */
@@ -1310,7 +1310,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   justify-content: center;
 }
 @media (max-width: 640px) {
-  .bismillah { font-size: 1.25rem; line-height: 2.2; padding: 0 0.5rem; }
+  .bismillah { line-height: 2.2; padding: 0 0.5rem; }
   .verse-result-ar, .saved-verse-ar { overflow-wrap: break-word; }
   .nav-row { min-height: 52px; }
   .juz-check { min-width: 44px; min-height: 44px; justify-content: center; }
